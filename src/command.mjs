@@ -153,7 +153,7 @@ export function runCursorCommand(command) {
 }
 
 function buildRunPrompt(parts) {
-	return `ultrawork: ${parts.join(" ")}`.trim();
+	return `ultrawork ${parts.join(" ")}`.trim();
 }
 
 function shellQuote(value) {

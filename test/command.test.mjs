@@ -49,7 +49,7 @@ describe("buildCursorCommand", () => {
 			"--output-format",
 			"text",
 		]);
-		assert.equal(command.args.at(-1), "ultrawork: fix the tests");
+		assert.equal(command.args.at(-1), "ultrawork fix the tests");
 	});
 
 	it("Given ask and plan commands When building the command Then it selects Cursor read-only modes", () => {
@@ -93,6 +93,7 @@ describe("buildInstallPlan", () => {
 				"/repo/.cursor/commands/ultrawork.md",
 				"/repo/.cursor/rules/lazycursor-ultrawork.mdc",
 				"/repo/AGENTS.md",
+				"/repo/.cursor/hooks/lazycursor.mjs",
 			],
 		);
 		assert.match(plan.files[0].content, /Ultrawork mode/);
@@ -110,6 +111,7 @@ describe("buildInstallPlan", () => {
 			plan.files[3].content,
 			/when no higher-priority instruction conflicts/,
 		);
+		assert.match(plan.files[4].content, /LAZYCURSOR STOP HOOK/);
 	});
 
 	it("Given an existing AGENTS file When applying the install plan Then user instructions are preserved and lazycursor block is updated once", () => {

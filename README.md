@@ -31,11 +31,19 @@ ultrawork ship this feature with tests
 - `.cursor/commands/ulw.md`
 - `.cursor/commands/ultrawork.md`
 - `.cursor/rules/lazycursor-ultrawork.mdc`
+- `.cursor/hooks/lazycursor.mjs`
+- `.cursor/hooks.json` entries for `beforeSubmitPrompt` and `stop`
+- `.cursor/lazycursor/state.json`
 - an `AGENTS.md` managed block that preserves existing project instructions
 
-Cursor CLI does not currently expose the same hook/lifecycle surface as Codex,
-so `/ulw` is the reliable command path. Bare `ulw ...` depends on Cursor reading
-the installed rules.
+After installing, restart the current Cursor Agent session so commands, rules,
+and hooks are reloaded.
+
+The JSON state hook activates on `/ulw`, `/ultrawork`, bare `ulw ...`, or bare
+`ultrawork ...`. While `.cursor/lazycursor/state.json` is active, the `stop`
+hook returns a follow-up message if workflow obligations are still pending.
+Obligations use `status: "pending"` until complete and `status: "done"` after
+evidence exists.
 
 ### Optional headless examples
 
@@ -68,11 +76,14 @@ ultrawork 테스트 포함해서 기능 배포해
 ```
 
 `lazycursor install`은 Cursor 명령, rule, 그리고 기존 내용을 보존하는
-`AGENTS.md` managed block을 설치합니다.
+`AGENTS.md` managed block을 설치합니다. 또한 `.cursor/hooks/lazycursor.mjs`,
+`.cursor/hooks.json`, `.cursor/lazycursor/state.json`을 추가해 JSON state와
+`stop` hook 기반 continuation을 활성화합니다.
 
-Cursor CLI는 Codex와 같은 prompt hook/lifecycle 표면을 안정적으로 제공하지
-않으므로 `/ulw`가 가장 확실한 호출 방식입니다. bare `ulw ...`는 Cursor가
-설치된 rule을 읽고 따르는 경우에만 동작합니다.
+설치 후에는 현재 Cursor Agent 세션을 종료하고 같은 workspace에서 새로 여는 것이
+가장 확실합니다. JSON state가 `active: true`인 동안 미완료 obligation이 있으면
+`stop` hook이 follow-up 메시지를 반환해 계속 진행하도록 유도합니다. obligation
+상태값은 완료 전 `pending`, 증거 확인 후 `done`을 사용합니다.
 
 ## 日本語
 
@@ -96,11 +107,14 @@ ultrawork テスト付きで機能を実装して
 ```
 
 `lazycursor install` は Cursor の command/rule と、既存の指示を保持する
-`AGENTS.md` managed block を追加します。
+`AGENTS.md` managed block を追加します。さらに `.cursor/hooks/lazycursor.mjs`,
+`.cursor/hooks.json`, `.cursor/lazycursor/state.json` を追加し、JSON state と
+`stop` hook による continuation を有効にします。
 
-Cursor CLI は Codex と同等の hook/lifecycle surface をまだ提供していないため、
-`/ulw` が最も確実な呼び出し方法です。bare `ulw ...` は Cursor がインストール済み
-rule を読む場合にのみ安定します。
+インストール後は、現在の Cursor Agent セッションを終了し、同じ workspace で
+新しいセッションを開始してください。JSON state が `active: true` の間は、
+未完了の obligation があると `stop` hook が follow-up message を返します。
+obligation の状態値は、完了前は `pending`、証拠確認後は `done` を使います。
 
 ## 中文
 
@@ -124,15 +138,19 @@ ultrawork ship this feature with tests
 ```
 
 `lazycursor install` 会写入 Cursor command/rule，并在 `AGENTS.md` 中加入一个
-保留现有项目指令的 managed block。
+保留现有项目指令的 managed block。它还会添加
+`.cursor/hooks/lazycursor.mjs`、`.cursor/hooks.json` 和
+`.cursor/lazycursor/state.json`，启用 JSON state 与 `stop` hook continuation。
 
-Cursor CLI 目前没有 Codex 那种完整的 hook/lifecycle surface，因此 `/ulw` 是更可靠
-的调用方式。bare `ulw ...` 取决于 Cursor 是否读取并遵守已安装的 rule。
+安装后请重启当前 Cursor Agent session，并在同一个 workspace 中重新打开。
+当 JSON state 为 `active: true` 且还有 pending obligation 时，`stop` hook 会返回
+follow-up message，要求 agent 继续完成流程。obligation 状态值在完成前使用
+`pending`，有证据确认后使用 `done`。
 
 ## Commands
 
 - `lazycursor install [--target <workspace>]`: install Cursor commands, rules,
-  and AGENTS routing.
+  hooks, JSON state, and AGENTS routing.
 - `lazycursor <task...>`: optional headless runner using `cursor-agent --print`.
 - `lazycursor run <task...>`: explicit form of the default task runner.
 - `lazycursor ask <question...>`: run Cursor Agent in read-only ask mode.
