@@ -1,0 +1,37 @@
+{
+	"name": "lazycursor-ai",
+	"version": "0.1.0",
+	"description": "Cursor Agent ultrawork command installer inspired by lazycodex.",
+	"type": "module",
+	"bin": {
+		"lazycursor": "bin/lazycursor-ai.js",
+		"lazycursor-ai": "bin/lazycursor-ai.js"
+	},
+	"files": [
+		"bin",
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"test": "node --test test/*.test.mjs",
+		"pack:dry-run": "npm pack --dry-run"
+	},
+	"keywords": [
+		"cursor",
+		"cursor-agent",
+		"ai-agents",
+		"orchestration",
+		"lazycursor"
+	],
+	"author": "Yeongyu Kim",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/MovieHolic-Plex/lazycursor.git"
+	},
+	"bugs": {
+		"url": "https://github.com/MovieHolic-Plex/lazycursor/issues"
+	},
+	"homepage": "https://github.com/MovieHolic-Plex/lazycursor#readme"
+}
