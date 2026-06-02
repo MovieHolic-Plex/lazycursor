@@ -94,6 +94,12 @@ export function formatInstallPlan(plan) {
 
 export function applyInstallPlan(plan) {
 	for (const file of plan.files) {
+		if (!file.path.endsWith("AGENTS.md")) {
+			assertManagedFileWritable(file.path, file.content);
+		}
+	}
+
+	for (const file of plan.files) {
 		mkdirSync(dirname(file.path), { recursive: true });
 		if (file.path.endsWith("AGENTS.md")) {
 			writeFileSync(
@@ -109,15 +115,19 @@ export function applyInstallPlan(plan) {
 
 function writeManagedFile(path, content) {
 	const nextContent = `${content}\n`;
+	assertManagedFileWritable(path, content);
 
+	writeFileSync(path, nextContent, "utf8");
+}
+
+function assertManagedFileWritable(path, content) {
+	const nextContent = `${content}\n`;
 	if (existsSync(path)) {
 		const current = readFileSync(path, "utf8");
 		if (current !== nextContent) {
 			throw new Error(`Refusing to overwrite existing unmanaged file: ${path}`);
 		}
 	}
-
-	writeFileSync(path, nextContent, "utf8");
 }
 
 function mergeAgentsContent(path, managedBlock) {

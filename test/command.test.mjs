@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
@@ -184,6 +185,29 @@ describe("buildInstallPlan", () => {
 			assert.equal(agents.match(/LAZYCURSOR MANAGED BLOCK START/g)?.length, 1);
 			assert.equal(agents.match(/LAZYCURSOR MANAGED BLOCK END/g)?.length, 1);
 			assert.doesNotMatch(agents, /stale duplicate/);
+		} finally {
+			rmSync(target, { recursive: true, force: true });
+		}
+	});
+
+	it("Given a later unmanaged Cursor file conflict When applying the install plan Then no earlier Cursor files are written", () => {
+		const target = mkdtempSync(join(tmpdir(), "lazycursor-test-"));
+		try {
+			const commandDir = join(target, ".cursor", "commands");
+			const ulwPath = join(commandDir, "ulw.md");
+			const ultraworkPath = join(commandDir, "ultrawork.md");
+			mkdirSync(commandDir, { recursive: true });
+			writeFileSync(ultraworkPath, "# Custom ultrawork command\n", "utf8");
+
+			assert.throws(
+				() => applyInstallPlan(buildInstallPlan(target)),
+				/Refusing to overwrite existing unmanaged file/,
+			);
+			assert.equal(
+				readFileSync(ultraworkPath, "utf8"),
+				"# Custom ultrawork command\n",
+			);
+			assert.equal(existsSync(ulwPath), false);
 		} finally {
 			rmSync(target, { recursive: true, force: true });
 		}
