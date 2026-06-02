@@ -103,8 +103,21 @@ export function applyInstallPlan(plan) {
 			);
 			continue;
 		}
-		writeFileSync(file.path, `${file.content}\n`, "utf8");
+		writeManagedFile(file.path, file.content);
 	}
+}
+
+function writeManagedFile(path, content) {
+	const nextContent = `${content}\n`;
+
+	if (existsSync(path)) {
+		const current = readFileSync(path, "utf8");
+		if (current !== nextContent) {
+			throw new Error(`Refusing to overwrite existing unmanaged file: ${path}`);
+		}
+	}
+
+	writeFileSync(path, nextContent, "utf8");
 }
 
 function mergeAgentsContent(path, managedBlock) {
@@ -115,12 +128,31 @@ function mergeAgentsContent(path, managedBlock) {
 	}
 
 	const current = readFileSync(path, "utf8");
-	const start = current.indexOf(AGENTS_BLOCK_START);
-	const end = current.indexOf(AGENTS_BLOCK_END);
+	let cursor = 0;
+	let merged = "";
+	let inserted = false;
 
-	if (start !== -1 && end !== -1 && end > start) {
+	while (cursor < current.length) {
+		const start = current.indexOf(AGENTS_BLOCK_START, cursor);
+		if (start === -1) {
+			break;
+		}
+		const end = current.indexOf(AGENTS_BLOCK_END, start);
+		if (end === -1) {
+			break;
+		}
 		const afterEnd = end + AGENTS_BLOCK_END.length;
-		return `${current.slice(0, start)}${nextBlock}${current.slice(afterEnd).replace(/^\n/, "")}`;
+		merged += current.slice(cursor, start);
+		if (!inserted) {
+			merged += nextBlock;
+			inserted = true;
+		}
+		cursor = current[afterEnd] === "\n" ? afterEnd + 1 : afterEnd;
+	}
+
+	if (inserted) {
+		merged += current.slice(cursor);
+		return merged.replace(/\n{3,}/g, "\n\n");
 	}
 
 	const separator = current.endsWith("\n") ? "\n" : "\n\n";

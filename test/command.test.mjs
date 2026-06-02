@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -122,6 +128,62 @@ describe("buildInstallPlan", () => {
 			assert.match(agents, /Keep this line\./);
 			assert.equal(agents.match(/LAZYCURSOR MANAGED BLOCK START/g)?.length, 1);
 			assert.equal(agents.match(/LAZYCURSOR MANAGED BLOCK END/g)?.length, 1);
+		} finally {
+			rmSync(target, { recursive: true, force: true });
+		}
+	});
+
+	it("Given an existing custom Cursor command When applying the install plan Then unmanaged files are not overwritten", () => {
+		const target = mkdtempSync(join(tmpdir(), "lazycursor-test-"));
+		try {
+			const commandDir = join(target, ".cursor", "commands");
+			const commandPath = join(commandDir, "ulw.md");
+			mkdirSync(commandDir, { recursive: true });
+			writeFileSync(commandPath, "# Custom team command\n", "utf8");
+
+			assert.throws(
+				() => applyInstallPlan(buildInstallPlan(target)),
+				/Refusing to overwrite existing unmanaged file/,
+			);
+			assert.equal(
+				readFileSync(commandPath, "utf8"),
+				"# Custom team command\n",
+			);
+		} finally {
+			rmSync(target, { recursive: true, force: true });
+		}
+	});
+
+	it("Given duplicate lazycursor AGENTS blocks When applying the install plan Then stale duplicates are collapsed into one block", () => {
+		const target = mkdtempSync(join(tmpdir(), "lazycursor-test-"));
+		try {
+			writeFileSync(
+				join(target, "AGENTS.md"),
+				[
+					"# Existing instructions",
+					"",
+					"<!-- LAZYCURSOR MANAGED BLOCK START -->",
+					"old block",
+					"<!-- LAZYCURSOR MANAGED BLOCK END -->",
+					"",
+					"Keep this line.",
+					"",
+					"<!-- LAZYCURSOR MANAGED BLOCK START -->",
+					"stale duplicate",
+					"<!-- LAZYCURSOR MANAGED BLOCK END -->",
+					"",
+				].join("\n"),
+				"utf8",
+			);
+
+			applyInstallPlan(buildInstallPlan(target));
+
+			const agents = readFileSync(join(target, "AGENTS.md"), "utf8");
+
+			assert.match(agents, /Keep this line\./);
+			assert.equal(agents.match(/LAZYCURSOR MANAGED BLOCK START/g)?.length, 1);
+			assert.equal(agents.match(/LAZYCURSOR MANAGED BLOCK END/g)?.length, 1);
+			assert.doesNotMatch(agents, /stale duplicate/);
 		} finally {
 			rmSync(target, { recursive: true, force: true });
 		}
