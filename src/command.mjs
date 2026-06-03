@@ -1,4 +1,9 @@
 import { spawnSync } from "node:child_process";
+import {
+	activateUltraworkState,
+	buildStopFollowup,
+	inspectLazycursorStop,
+} from "./state.mjs";
 
 const DEFAULT_CURSOR_AGENT_BIN = "cursor-agent";
 
@@ -41,9 +46,20 @@ export function buildCursorCommand(argv, options = {}) {
 	}
 
 	if (command === "run") {
+		const prompt = rest.join(" ");
 		return {
 			bin,
-			args: [...BASE_HEADLESS_ARGS, buildRunPrompt(rest)],
+			args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+			statePrompt: prompt,
+		};
+	}
+
+	if (command === "ulw" || command === "ultrawork") {
+		const prompt = rest.join(" ");
+		return {
+			bin,
+			args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+			statePrompt: prompt,
 		};
 	}
 
@@ -61,9 +77,11 @@ export function buildCursorCommand(argv, options = {}) {
 		};
 	}
 
+	const prompt = argv.join(" ");
 	return {
 		bin,
-		args: [...BASE_HEADLESS_ARGS, buildRunPrompt(argv)],
+		args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+		statePrompt: prompt,
 	};
 }
 
@@ -139,7 +157,42 @@ export function formatDryRunCommand(command) {
 }
 
 export function runCursorCommand(command) {
-	const result = spawnSync(command.bin, command.args, {
+	if (typeof command.statePrompt !== "string") {
+		return runCursorAgent(command.bin, command.args);
+	}
+
+	return runEnforcedUltrawork(command);
+}
+
+function runEnforcedUltrawork(command) {
+	const workspace = process.cwd();
+	activateUltraworkState(workspace, command.statePrompt);
+
+	let args = command.args;
+	for (;;) {
+		const status = runCursorAgent(command.bin, args);
+		if (status !== 0) {
+			return status;
+		}
+
+		const stop = inspectLazycursorStop(workspace);
+		if (stop.kind === "inactive" || stop.kind === "finished") {
+			return 0;
+		}
+
+		const followup = buildStopFollowup(stop.pending);
+		if (stop.kind === "limit_exceeded") {
+			console.error(followup);
+			console.error("LAZYCURSOR STOP WRAPPER: loop limit exceeded.");
+			return 1;
+		}
+
+		args = [...args.slice(0, -1), buildRunPrompt(followup)];
+	}
+}
+
+function runCursorAgent(bin, args) {
+	const result = spawnSync(bin, args, {
 		cwd: process.cwd(),
 		env: process.env,
 		stdio: "inherit",
@@ -152,8 +205,8 @@ export function runCursorCommand(command) {
 	return 1;
 }
 
-function buildRunPrompt(parts) {
-	return `ultrawork ${parts.join(" ")}`.trim();
+function buildRunPrompt(prompt) {
+	return `ultrawork ${prompt}`.trim();
 }
 
 function shellQuote(value) {

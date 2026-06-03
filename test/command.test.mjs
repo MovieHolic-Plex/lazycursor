@@ -50,6 +50,14 @@ describe("buildCursorCommand", () => {
 			"text",
 		]);
 		assert.equal(command.args.at(-1), "ultrawork fix the tests");
+		assert.equal(command.statePrompt, "fix the tests");
+	});
+
+	it("Given an explicit ulw command When building the command Then the wrapper strips the trigger before activating state", () => {
+		const command = buildCursorCommand(["ulw", "fix", "the", "tests"]);
+
+		assert.equal(command.args.at(-1), "ultrawork fix the tests");
+		assert.equal(command.statePrompt, "fix the tests");
 	});
 
 	it("Given ask and plan commands When building the command Then it selects Cursor read-only modes", () => {
