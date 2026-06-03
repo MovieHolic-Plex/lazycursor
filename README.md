@@ -3,14 +3,15 @@
 `lazycursor-ai` is a small Cursor Agent wrapper and workspace installer inspired
 by `lazycodex-ai`.
 
-Hard enforcement runs through the `lazycursor` wrapper. The wrapper starts
-Cursor Agent in headless mode, activates `.cursor/lazycursor/state.json`, and
-keeps sending a follow-up prompt while ultrawork obligations remain pending.
+Hard enforcement runs through the `lazycursor` wrapper. The wrapper can start
+Cursor Agent in headless mode or drive `cursor-agent acp`, activates
+`.cursor/lazycursor/state.json`, and keeps sending a follow-up prompt while
+ultrawork obligations remain pending.
 
-Cursor Agent TUI usage is still supported as soft routing through installed
-commands, rules, and `AGENTS.md`. Current Cursor CLI/TUI builds may not dispatch
-project hooks, so TUI-only `/ulw` or bare `ulw` should not be treated as hard
-JSON state enforcement.
+The ACP path is the closest replacement for a lazycodex-style enforced agent
+surface in Cursor today: lazycursor owns the client loop and Cursor Agent runs
+as an ACP server. Stock Cursor Agent TUI usage is still supported as soft
+routing through installed commands, rules, and `AGENTS.md`.
 
 ## English
 
@@ -44,6 +45,14 @@ npx lazycursor-ai ultrawork "refactor the auth flow"
 npx lazycursor-ai "ship this feature with tests"
 ```
 
+Use the ACP-backed runner when you want lazycursor to keep a single Cursor Agent
+ACP session open and enforce the same JSON state loop:
+
+```bash
+npx github:MovieHolic-Plex/lazycursor tui "fix failing tests"
+npx lazycursor-ai tui "fix failing tests"
+```
+
 During those runs, lazycursor writes:
 
 - `.cursor/lazycursor/state.json`
@@ -52,9 +61,11 @@ During those runs, lazycursor writes:
 The default obligations are `plan`, `implementation`, `verification`, and
 `report`. Each obligation starts as `pending` and must become `done` before the
 wrapper allows the workflow to finish. If obligations remain pending after a
-Cursor Agent run, the wrapper sends a `LAZYCURSOR STOP WRAPPER` follow-up.
+headless Cursor Agent run, the wrapper sends a `LAZYCURSOR STOP WRAPPER`
+follow-up. If obligations remain pending in ACP mode, it sends a
+`LAZYCURSOR STOP ACP` follow-up inside the same ACP session.
 
-### Cursor Agent TUI Usage
+### Stock Cursor Agent TUI Usage
 
 After `lazycursor install`, restart the current Cursor Agent session and use:
 
@@ -77,8 +88,8 @@ This installs:
 
 The hook files are installed as a best-effort Cursor hook surface. If your
 Cursor Agent build dispatches project hooks, they can activate and block on the
-same JSON state. If it does not, use the wrapper commands above for hard
-enforcement.
+same JSON state. If it does not, use `lazycursor tui ...` or the headless
+wrapper commands above for hard enforcement.
 
 ### Other Commands
 
@@ -122,13 +133,22 @@ npx lazycursor-ai ultrawork "인증 흐름 리팩터링해"
 npx lazycursor-ai "테스트 포함해서 기능 배포해"
 ```
 
+Cursor Agent를 ACP 서버로 띄우고 같은 세션 안에서 STOP follow-up을 강제하려면
+다음 경로를 씁니다.
+
+```bash
+npx github:MovieHolic-Plex/lazycursor tui "실패하는 테스트 수정해"
+npx lazycursor-ai tui "실패하는 테스트 수정해"
+```
+
 이 경로에서는 lazycursor가 `.cursor/lazycursor/state.json`을 `active: true`로
 만든 뒤 Cursor Agent를 실행합니다. 실행 후 `plan`, `implementation`,
 `verification`, `report` obligation 중 하나라도 `pending`이면
-`LAZYCURSOR STOP WRAPPER` follow-up을 다시 넣습니다. 모든 obligation이 `done`이
-되면 state를 `active: false`, `phase: "finished"`로 닫습니다.
+headless 모드에서는 `LAZYCURSOR STOP WRAPPER`, ACP 모드에서는
+`LAZYCURSOR STOP ACP` follow-up을 다시 넣습니다. 모든 obligation이 `done`이 되면
+state를 `active: false`, `phase: "finished"`로 닫습니다.
 
-### Cursor Agent TUI 사용법
+### 기본 Cursor Agent TUI 사용법
 
 `lazycursor install` 후 기존 Cursor Agent 세션을 종료하고 같은 workspace에서 새로
 열면 다음 입력을 soft routing으로 사용할 수 있습니다.
@@ -142,8 +162,9 @@ ultrawork 테스트 포함해서 기능 배포해
 
 설치되는 파일은 Cursor command, rule, `AGENTS.md` managed block, hook script,
 hook config, 초기 state 파일입니다. 다만 현재 Cursor Agent CLI/TUI 빌드에서는
-프로젝트 hook이 호출되지 않을 수 있습니다. 이 경우 TUI 내부 `ulw`는 안내와 routing
-수준이고, 강제성은 위의 `lazycursor ulw ...` 래퍼 경로에서 보장됩니다.
+프로젝트 hook이 호출되지 않을 수 있습니다. 이 경우 기본 TUI 내부 `ulw`는 안내와
+routing 수준이고, 강제성은 `lazycursor tui ...` 또는 `lazycursor ulw ...` 래퍼
+경로에서 보장됩니다.
 
 ## 日本語
 
@@ -177,11 +198,20 @@ npx lazycursor-ai ultrawork "auth flow をリファクタして"
 npx lazycursor-ai "テスト付きで機能を実装して"
 ```
 
+同じ Cursor Agent ACP session の中で STOP follow-up を強制したい場合は、ACP
+runner を使います。
+
+```bash
+npx github:MovieHolic-Plex/lazycursor tui "failing tests を修正して"
+npx lazycursor-ai tui "failing tests を修正して"
+```
+
 この経路では `.cursor/lazycursor/state.json` が active になり、`plan`,
 `implementation`, `verification`, `report` がすべて `done` になるまで
-`LAZYCURSOR STOP WRAPPER` follow-up が送られます。
+headless mode では `LAZYCURSOR STOP WRAPPER`、ACP mode では
+`LAZYCURSOR STOP ACP` follow-up が送られます。
 
-### Cursor Agent TUI での使い方
+### 通常の Cursor Agent TUI での使い方
 
 `lazycursor install` の後、現在の Cursor Agent session を再起動すると、TUI 内で
 次の soft routing を使えます。
@@ -195,7 +225,7 @@ ultrawork テスト付きで機能を実装して
 
 現在の Cursor Agent CLI/TUI build では project hook が dispatch されない場合が
 あります。その場合、TUI の `ulw` は routing であり、強制実行は
-`lazycursor ulw ...` ラッパー経由で行います。
+`lazycursor tui ...` または `lazycursor ulw ...` ラッパー経由で行います。
 
 ## 中文
 
@@ -230,12 +260,21 @@ npx lazycursor-ai ultrawork "refactor the auth flow"
 npx lazycursor-ai "ship this feature with tests"
 ```
 
+如果要让 lazycursor 在同一个 Cursor Agent ACP session 中强制发送 STOP
+follow-up，请使用 ACP runner：
+
+```bash
+npx github:MovieHolic-Plex/lazycursor tui "fix failing tests"
+npx lazycursor-ai tui "fix failing tests"
+```
+
 该路径会激活 `.cursor/lazycursor/state.json`。只要 `plan`,
 `implementation`, `verification`, `report` 中还有 `pending` obligation，wrapper
-就会再次发送 `LAZYCURSOR STOP WRAPPER` follow-up。全部变成 `done` 后，state 会被
-关闭为 `active: false` 和 `phase: "finished"`。
+在 headless mode 会再次发送 `LAZYCURSOR STOP WRAPPER` follow-up，在 ACP mode 会发送
+`LAZYCURSOR STOP ACP` follow-up。全部变成 `done` 后，state 会被关闭为
+`active: false` 和 `phase: "finished"`。
 
-### Cursor Agent TUI 用法
+### 默认 Cursor Agent TUI 用法
 
 运行 `lazycursor install` 后，重启当前 Cursor Agent session，并在同一 workspace
 中使用：
@@ -247,9 +286,10 @@ ulw investigate this bug
 ultrawork ship this feature with tests
 ```
 
-TUI 用法依赖安装的 command、rule、`AGENTS.md` managed block 和 best-effort hook。
-如果当前 Cursor Agent build 不 dispatch project hooks，TUI 中的 `ulw` 只是 soft
-routing。需要强制执行时请使用 `lazycursor ulw ...` wrapper。
+默认 TUI 用法依赖安装的 command、rule、`AGENTS.md` managed block 和 best-effort
+hook。如果当前 Cursor Agent build 不 dispatch project hooks，TUI 中的 `ulw` 只是
+soft routing。需要强制执行时请使用 `lazycursor tui ...` 或 `lazycursor ulw ...`
+wrapper。
 
 ## Commands
 
@@ -257,6 +297,7 @@ routing。需要强制执行时请使用 `lazycursor ulw ...` wrapper。
   best-effort hooks, JSON state, and AGENTS routing.
 - `lazycursor <task...>`: hard-enforced headless ultrawork runner.
 - `lazycursor run <task...>`: explicit form of the default task runner.
+- `lazycursor tui <task...>`: hard-enforced ACP runner using `cursor-agent acp`.
 - `lazycursor ulw <task...>`: hard-enforced ultrawork runner.
 - `lazycursor ultrawork <task...>`: hard-enforced ultrawork runner.
 - `lazycursor ask <question...>`: run Cursor Agent in read-only ask mode.

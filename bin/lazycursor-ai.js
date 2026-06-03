@@ -39,4 +39,4 @@ if (parsed.dryRun) {
 	process.exit(0);
 }
 
-process.exit(runCursorCommand(parsed.command));
+process.exit(await runCursorCommand(parsed.command));

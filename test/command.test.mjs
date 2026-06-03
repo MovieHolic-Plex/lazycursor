@@ -68,6 +68,15 @@ describe("buildCursorCommand", () => {
 		assert.deepEqual(plan.args.slice(5), ["--mode", "plan", "migrate db"]);
 	});
 
+	it("Given a tui command When building the command Then it selects ACP mode with state enforcement", () => {
+		const command = buildCursorCommand(["tui", "fix", "the", "tests"]);
+
+		assert.equal(command.bin, "cursor-agent");
+		assert.deepEqual(command.args, ["acp"]);
+		assert.equal(command.runner, "acp");
+		assert.equal(command.statePrompt, "fix the tests");
+	});
+
 	it("Given raw cursor separator When building the command Then raw Cursor Agent args pass through unchanged", () => {
 		const command = buildCursorCommand(["--", "--version"]);
 

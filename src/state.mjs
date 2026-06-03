@@ -57,7 +57,11 @@ export function activateUltraworkState(workspace, prompt, source = "wrapper") {
 	return nextState;
 }
 
-export function inspectLazycursorStop(workspace, limit = 8) {
+export function inspectLazycursorStop(
+	workspace,
+	limit = 8,
+	source = "wrapper",
+) {
 	const state = readLazycursorState(workspace);
 	if (!state.active) {
 		return { kind: "inactive", pending: [], state };
@@ -75,7 +79,7 @@ export function inspectLazycursorStop(workspace, limit = 8) {
 			updatedAt: now,
 		};
 		writeLazycursorState(workspace, nextState);
-		appendLazycursorEvent(workspace, { event: "finish", source: "wrapper" });
+		appendLazycursorEvent(workspace, { event: "finish", source });
 		return { kind: "finished", pending: [], state: nextState };
 	}
 
@@ -91,7 +95,7 @@ export function inspectLazycursorStop(workspace, limit = 8) {
 	appendLazycursorEvent(workspace, {
 		event: "stop_block",
 		pending: pending.map((item) => item.id),
-		source: "wrapper",
+		source,
 		stopLoopCount,
 	});
 
@@ -99,9 +103,9 @@ export function inspectLazycursorStop(workspace, limit = 8) {
 	return { kind, pending, state: nextState };
 }
 
-export function buildStopFollowup(pending) {
+export function buildStopFollowup(pending, label = "WRAPPER") {
 	return [
-		"LAZYCURSOR STOP WRAPPER: active ultrawork state is not complete.",
+		`LAZYCURSOR STOP ${label}: active ultrawork state is not complete.`,
 		"Read .cursor/lazycursor/state.json, finish pending obligations, and update the JSON state as evidence is completed.",
 		`Pending obligations: ${pending.map((item) => item.id).join(", ")}`,
 		"Do not set active=false until verification and final reporting are complete.",

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { runEnforcedAcpUltrawork } from "./acp.mjs";
 import {
 	activateUltraworkState,
 	buildStopFollowup,
@@ -18,6 +19,7 @@ const BASE_HEADLESS_ARGS = [
 const USAGE = `Usage:
   lazycursor [--dry-run] <task...>
   lazycursor [--dry-run] run <task...>
+  lazycursor [--dry-run] tui <task...>
   lazycursor [--dry-run] ask <question...>
   lazycursor [--dry-run] plan <task...>
   lazycursor [--dry-run] install [--target <workspace>]
@@ -25,6 +27,7 @@ const USAGE = `Usage:
 
 Examples:
   lazycursor --dry-run "fix failing tests"
+  lazycursor tui "fix failing tests"
   lazycursor install --target /path/to/workspace
   lazycursor -- --version`;
 
@@ -50,6 +53,16 @@ export function buildCursorCommand(argv, options = {}) {
 		return {
 			bin,
 			args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+			statePrompt: prompt,
+		};
+	}
+
+	if (command === "tui") {
+		const prompt = rest.join(" ");
+		return {
+			bin,
+			args: ["acp"],
+			runner: "acp",
 			statePrompt: prompt,
 		};
 	}
@@ -157,6 +170,10 @@ export function formatDryRunCommand(command) {
 }
 
 export function runCursorCommand(command) {
+	if (command.runner === "acp") {
+		return runEnforcedAcpUltrawork(command);
+	}
+
 	if (typeof command.statePrompt !== "string") {
 		return runCursorAgent(command.bin, command.args);
 	}
