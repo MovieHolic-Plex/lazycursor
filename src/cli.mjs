@@ -3,8 +3,8 @@ import {
 	normalizeLcursorArgs,
 	parseInteractiveLcursorArgs,
 	parseLazycursorArgs,
-	runCursorCommand,
-} from "./command.mjs";
+} from "./args.mjs";
+import { runCursorCommand } from "./command.mjs";
 import {
 	applyInstallPlan,
 	buildInstallPlan,
@@ -47,7 +47,10 @@ export async function runLazycursorCli(argv) {
 export async function runLcursorCli(argv) {
 	const interactive = parseInteractiveLcursorArgs(argv);
 	if (interactive.kind === "interactive") {
-		return runInteractiveTui({ cursorAgentBin: interactive.cursorAgentBin });
+		return runInteractiveTui({
+			cursorAgentBin: interactive.cursorAgentBin,
+			model: interactive.model,
+		});
 	}
 
 	if (interactive.kind === "error") {

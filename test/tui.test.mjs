@@ -32,12 +32,14 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		const app = render(
 			React.createElement(LazycursorTuiApp, {
 				cursorAgentBin: "/tmp/fake-acp-agent.mjs",
+				model: "composer-2.5-fast",
 			}),
 		);
 
 		const frame = app.lastFrame() ?? "";
 		assert.match(frame, /runner: \/tmp\/fake-acp-agent\.mjs/);
 		assert.match(frame, /mode: json-state stop-loop/);
+		assert.match(frame, /model: composer-2\.5-fast/);
 		assert.match(frame, /task: -/);
 		assert.doesNotMatch(frame, /runner\/tmp/);
 		assert.doesNotMatch(frame, /modejson-state/);
@@ -59,6 +61,7 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 			React.createElement(LazycursorTuiApp, {
 				autoExit: false,
 				cursorAgentBin: "/tmp/fake-agent",
+				model: "composer-2.5-fast",
 				onExitStatus: (status) => {
 					exitStatus = status;
 				},
@@ -75,7 +78,7 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 
 		assert.deepEqual(calls[0], {
 			bin: "/tmp/fake-agent",
-			args: ["acp"],
+			args: ["--model", "composer-2.5-fast", "acp"],
 			runner: "acp",
 			statePrompt: "fix tests",
 		});
@@ -84,6 +87,37 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		assert.match(app.lastFrame() ?? "", /USER/);
 		assert.match(app.lastFrame() ?? "", /AGENT/);
 		assert.match(app.lastFrame() ?? "", /DONE/);
+
+		app.unmount();
+	});
+
+	it("Given character-sized ACP chunks When streamed Then transcript coalesces them into readable lines", async () => {
+		const runCommand = async (_command, options) => {
+			options.onOutput("뒤");
+			options.onOutput(",");
+			options.onOutput(" 개선");
+			options.onOutput("합니다\n다");
+			options.onOutput("음 줄");
+			return 0;
+		};
+		const app = render(
+			React.createElement(LazycursorTuiApp, {
+				autoExit: false,
+				runCommand,
+			}),
+		);
+
+		app.stdin.write("stream korean\r");
+
+		await waitFor(
+			() => app.lastFrame()?.includes("뒤, 개선합니다"),
+			"coalesced first streamed line",
+		);
+
+		const frame = app.lastFrame() ?? "";
+		assert.match(frame, /뒤, 개선합니다/);
+		assert.match(frame, /다음 줄/);
+		assert.equal(frame.match(/AGENT/g)?.length, 2);
 
 		app.unmount();
 	});

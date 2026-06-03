@@ -2,6 +2,7 @@ import { render, useApp, useInput } from "ink";
 import React, { useCallback, useState } from "react";
 import { buildCursorCommand, runCursorCommand } from "./command.mjs";
 import {
+	appendStreamingTranscript,
 	appendTranscript,
 	createInitialTranscript,
 	getVisibleTranscript,
@@ -20,6 +21,7 @@ export async function runInteractiveTui(options = {}) {
 		React.createElement(LazycursorTuiApp, {
 			autoExit: process.env.LAZYCURSOR_TUI_AUTO_EXIT === "1",
 			cursorAgentBin: options.cursorAgentBin ?? "cursor-agent",
+			model: options.model,
 			onExitStatus: (status) => {
 				exitStatus = status;
 			},
@@ -50,12 +52,18 @@ async function runLineInputFallback(options) {
 
 	const cursorAgentBin = options.cursorAgentBin ?? "cursor-agent";
 	const runCommand = options.runCommand ?? runCursorCommand;
-	return runCommand(buildCursorCommand(["tui", prompt], { cursorAgentBin }));
+	return runCommand(
+		buildCursorCommand(["tui", prompt], {
+			cursorAgentBin,
+			model: options.model,
+		}),
+	);
 }
 
 export function LazycursorTuiApp({
 	autoExit = false,
 	cursorAgentBin = "cursor-agent",
+	model,
 	onExitStatus,
 	runCommand = runCursorCommand,
 }) {
@@ -72,6 +80,11 @@ export function LazycursorTuiApp({
 		setTranscript((current) => appendTranscript(current, kind, text));
 	}, []);
 
+	const appendStreamEntry = useCallback((kind, text) => {
+		setScrollOffset(0);
+		setTranscript((current) => appendStreamingTranscript(current, kind, text));
+	}, []);
+
 	const submit = useCallback(
 		(value = prompt) => {
 			const task = value.trim();
@@ -86,9 +99,12 @@ export function LazycursorTuiApp({
 			setScrollOffset(0);
 			setTranscript(appendTranscript(createInitialTranscript(), "user", task));
 
-			const command = buildCursorCommand(["tui", task], { cursorAgentBin });
+			const command = buildCursorCommand(["tui", task], {
+				cursorAgentBin,
+				model,
+			});
 			void runCommand(command, {
-				onOutput: (text) => appendEntry("agent", text),
+				onOutput: (text) => appendStreamEntry("agent", text),
 			})
 				.then((status) => {
 					const nextPhase = status === 0 ? "done" : "failed";
@@ -126,9 +142,11 @@ export function LazycursorTuiApp({
 		},
 		[
 			appendEntry,
+			appendStreamEntry,
 			autoExit,
 			cursorAgentBin,
 			exit,
+			model,
 			onExitStatus,
 			phase,
 			prompt,
@@ -208,6 +226,7 @@ export function LazycursorTuiApp({
 		color: meta.color,
 		composerText,
 		cursorAgentBin,
+		model,
 		phase,
 		statusLabel: meta.label,
 		statusText,

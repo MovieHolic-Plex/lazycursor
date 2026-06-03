@@ -16,58 +16,9 @@ const BASE_HEADLESS_ARGS = [
 	"text",
 ];
 
-const USAGE = `Usage:
-  lazycursor [--dry-run] <task...>
-  lazycursor [--dry-run] run <task...>
-  lazycursor [--dry-run] tui <task...>
-  lazycursor [--dry-run] ask <question...>
-  lazycursor [--dry-run] plan <task...>
-  lazycursor [--dry-run] install [--target <workspace>]
-  lazycursor [--dry-run] -- <raw cursor-agent args...>
-
-Examples:
-  lazycursor --dry-run "fix failing tests"
-  lazycursor tui "fix failing tests"
-  lazycursor install --target /path/to/workspace
-  lazycursor -- --version`;
-
-const LCURSOR_PASSTHROUGH_COMMANDS = new Set([
-	"install",
-	"run",
-	"tui",
-	"ulw",
-	"ultrawork",
-	"ask",
-	"plan",
-]);
-
-export function parseInteractiveLcursorArgs(argv) {
-	let cursorAgentBin = DEFAULT_CURSOR_AGENT_BIN;
-
-	for (let index = 0; index < argv.length; index += 1) {
-		const value = argv[index];
-
-		if (value === "--cursor-agent-bin") {
-			const nextValue = argv[index + 1];
-			if (nextValue === undefined || nextValue.length === 0) {
-				return {
-					kind: "error",
-					message: "--cursor-agent-bin requires a value",
-				};
-			}
-			cursorAgentBin = nextValue;
-			index += 1;
-			continue;
-		}
-
-		return { kind: "passthrough" };
-	}
-
-	return { kind: "interactive", cursorAgentBin };
-}
-
 export function buildCursorCommand(argv, options = {}) {
 	const bin = options.cursorAgentBin ?? DEFAULT_CURSOR_AGENT_BIN;
+	const modelArgs = buildModelArgs(options.model);
 
 	if (argv.length === 0) {
 		return { bin, args: [] };
@@ -87,7 +38,7 @@ export function buildCursorCommand(argv, options = {}) {
 		const prompt = rest.join(" ");
 		return {
 			bin,
-			args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+			args: [...modelArgs, ...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
 			statePrompt: prompt,
 		};
 	}
@@ -96,7 +47,7 @@ export function buildCursorCommand(argv, options = {}) {
 		const prompt = rest.join(" ");
 		return {
 			bin,
-			args: ["acp"],
+			args: [...modelArgs, "acp"],
 			runner: "acp",
 			statePrompt: prompt,
 		};
@@ -106,7 +57,7 @@ export function buildCursorCommand(argv, options = {}) {
 		const prompt = rest.join(" ");
 		return {
 			bin,
-			args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+			args: [...modelArgs, ...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
 			statePrompt: prompt,
 		};
 	}
@@ -114,125 +65,35 @@ export function buildCursorCommand(argv, options = {}) {
 	if (command === "ask") {
 		return {
 			bin,
-			args: [...BASE_HEADLESS_ARGS, "--mode", "ask", rest.join(" ")],
+			args: [
+				...modelArgs,
+				...BASE_HEADLESS_ARGS,
+				"--mode",
+				"ask",
+				rest.join(" "),
+			],
 		};
 	}
 
 	if (command === "plan") {
 		return {
 			bin,
-			args: [...BASE_HEADLESS_ARGS, "--mode", "plan", rest.join(" ")],
+			args: [
+				...modelArgs,
+				...BASE_HEADLESS_ARGS,
+				"--mode",
+				"plan",
+				rest.join(" "),
+			],
 		};
 	}
 
 	const prompt = argv.join(" ");
 	return {
 		bin,
-		args: [...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
+		args: [...modelArgs, ...BASE_HEADLESS_ARGS, buildRunPrompt(prompt)],
 		statePrompt: prompt,
 	};
-}
-
-export function parseLazycursorArgs(argv) {
-	const args = [];
-	let dryRun = false;
-	let cursorAgentBin = DEFAULT_CURSOR_AGENT_BIN;
-	let targetDir = process.cwd();
-
-	for (let index = 0; index < argv.length; index += 1) {
-		const value = argv[index];
-
-		if (value === "--") {
-			args.push(...argv.slice(index));
-			break;
-		}
-
-		if (value === "--dry-run") {
-			dryRun = true;
-			continue;
-		}
-
-		if (value === "--help" || value === "-h") {
-			return { kind: "help", usage: USAGE };
-		}
-
-		if (value === "--cursor-agent-bin") {
-			const nextValue = argv[index + 1];
-			if (nextValue === undefined || nextValue.length === 0) {
-				return {
-					kind: "error",
-					message: "--cursor-agent-bin requires a value",
-				};
-			}
-			cursorAgentBin = nextValue;
-			index += 1;
-			continue;
-		}
-
-		if (value === "--target") {
-			const nextValue = argv[index + 1];
-			if (nextValue === undefined || nextValue.length === 0) {
-				return {
-					kind: "error",
-					message: "--target requires a value",
-				};
-			}
-			targetDir = nextValue;
-			index += 1;
-			continue;
-		}
-
-		args.push(value);
-	}
-
-	if (args[0] === "install") {
-		return {
-			kind: "install",
-			dryRun,
-			targetDir,
-		};
-	}
-
-	return {
-		kind: "run",
-		dryRun,
-		command: buildCursorCommand(args, { cursorAgentBin }),
-	};
-}
-
-export function normalizeLcursorArgs(argv) {
-	if (argv.length === 0) {
-		return ["--help"];
-	}
-
-	for (let index = 0; index < argv.length; index += 1) {
-		const value = argv[index];
-
-		if (value === "--" || value === "--help" || value === "-h") {
-			return argv;
-		}
-
-		if (value === "--dry-run") {
-			continue;
-		}
-
-		if (value === "--cursor-agent-bin" || value === "--target") {
-			index += 1;
-			continue;
-		}
-
-		if (LCURSOR_PASSTHROUGH_COMMANDS.has(value)) {
-			return argv;
-		}
-
-		return [...argv.slice(0, index), "tui", ...argv.slice(index)];
-	}
-
-	return ["--help"];
-}
-
-export function formatDryRunCommand(command) {
-	return [command.bin, ...command.args].map(shellQuote).join(" ");
 }
 
 export function runCursorCommand(command, options = {}) {
@@ -292,10 +153,8 @@ function buildRunPrompt(prompt) {
 	return `ultrawork ${prompt}`.trim();
 }
 
-function shellQuote(value) {
-	if (/^[A-Za-z0-9_/:=.,@%+-]+$/.test(value)) {
-		return value;
-	}
-
-	return `'${value.replaceAll("'", "'\\''")}'`;
+function buildModelArgs(model) {
+	return typeof model === "string" && model.length > 0
+		? ["--model", model]
+		: [];
 }

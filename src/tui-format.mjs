@@ -18,6 +18,23 @@ export function appendTranscript(entries, kind, text) {
 	]);
 }
 
+export function appendStreamingTranscript(entries, kind, text) {
+	const chunks = String(text).replaceAll("\r\n", "\n").split("\n");
+	const nextEntries = [...entries];
+
+	for (let index = 0; index < chunks.length; index += 1) {
+		const chunk = chunks[index];
+		if (chunk.length > 0) {
+			appendStreamingChunk(nextEntries, kind, chunk);
+		}
+		if (index < chunks.length - 1) {
+			sealLastEntry(nextEntries);
+		}
+	}
+
+	return trimTranscript(nextEntries);
+}
+
 export function getVisibleTranscript(entries, scrollOffset) {
 	const safeOffset = Math.max(0, Math.min(scrollOffset, entries.length));
 	const end = Math.max(0, entries.length - safeOffset);
@@ -70,6 +87,25 @@ export function splitOutput(text) {
 		.split(/\r?\n/)
 		.map((line) => line.trimEnd())
 		.filter((line) => line.length > 0);
+}
+
+function appendStreamingChunk(entries, kind, text) {
+	const last = entries.at(-1);
+	if (last?.kind === kind && last.sealed !== true) {
+		entries[entries.length - 1] = {
+			...last,
+			text: `${last.text}${text}`,
+		};
+		return;
+	}
+	entries.push({ kind, text, sealed: false });
+}
+
+function sealLastEntry(entries) {
+	const last = entries.at(-1);
+	if (last !== undefined) {
+		entries[entries.length - 1] = { ...last, sealed: true };
+	}
 }
 
 function trimTranscript(entries) {

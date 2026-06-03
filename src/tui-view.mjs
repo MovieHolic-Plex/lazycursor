@@ -7,6 +7,7 @@ export function LazycursorFrame({
 	color,
 	composerText,
 	cursorAgentBin,
+	model,
 	phase,
 	statusText,
 	statusLabel,
@@ -16,7 +17,7 @@ export function LazycursorFrame({
 		Box,
 		{ flexDirection: "column", paddingX: 1 },
 		React.createElement(Header, { label: statusLabel, color }),
-		React.createElement(StatusRail, { activeTask, cursorAgentBin }),
+		React.createElement(StatusRail, { activeTask, cursorAgentBin, model }),
 		React.createElement(ObligationRail, { completed: phase === "done" }),
 		React.createElement(TranscriptPanel, { color, entries: transcript }),
 		React.createElement(ComposerPanel, { phase, text: composerText }),
@@ -43,7 +44,7 @@ function Header({ color, label }) {
 	);
 }
 
-function StatusRail({ activeTask, cursorAgentBin }) {
+function StatusRail({ activeTask, cursorAgentBin, model }) {
 	return React.createElement(
 		Box,
 		{ flexDirection: "column" },
@@ -58,6 +59,12 @@ function StatusRail({ activeTask, cursorAgentBin }) {
 			null,
 			React.createElement(Text, { color: "gray" }, "mode: "),
 			"json-state stop-loop",
+		),
+		React.createElement(
+			Text,
+			null,
+			React.createElement(Text, { color: "gray" }, "model: "),
+			model ?? "cursor default",
 		),
 		React.createElement(
 			Text,

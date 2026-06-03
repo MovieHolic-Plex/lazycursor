@@ -11,14 +11,13 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-
 import {
-	buildCursorCommand,
 	formatDryRunCommand,
 	normalizeLcursorArgs,
 	parseInteractiveLcursorArgs,
 	parseLazycursorArgs,
-} from "../src/command.mjs";
+} from "../src/args.mjs";
+import { buildCursorCommand } from "../src/command.mjs";
 import { applyInstallPlan, buildInstallPlan } from "../src/install.mjs";
 
 const require = createRequire(import.meta.url);
@@ -53,6 +52,21 @@ describe("buildCursorCommand", () => {
 		]);
 		assert.equal(command.args.at(-1), "ultrawork fix the tests");
 		assert.equal(command.statePrompt, "fix the tests");
+	});
+
+	it("Given a model option When building headless and ACP commands Then Cursor receives the model before execution mode", () => {
+		const headless = buildCursorCommand(["fix", "tests"], {
+			model: "composer-2.5-fast",
+		});
+		const tui = buildCursorCommand(["tui", "fix", "tests"], {
+			model: "gpt-5.3-codex-high",
+		});
+
+		assert.deepEqual(headless.args.slice(0, 2), [
+			"--model",
+			"composer-2.5-fast",
+		]);
+		assert.deepEqual(tui.args, ["--model", "gpt-5.3-codex-high", "acp"]);
 	});
 
 	it("Given an explicit ulw command When building the command Then the wrapper strips the trigger before activating state", () => {
@@ -117,11 +131,28 @@ describe("normalizeLcursorArgs", () => {
 				"--dry-run",
 				"--cursor-agent-bin",
 				"/tmp/fake",
+				"--model",
+				"composer-2.5-fast",
 				"fix",
 				"tests",
 			]),
-			["--dry-run", "--cursor-agent-bin", "/tmp/fake", "tui", "fix", "tests"],
+			[
+				"--dry-run",
+				"--cursor-agent-bin",
+				"/tmp/fake",
+				"--model",
+				"composer-2.5-fast",
+				"tui",
+				"fix",
+				"tests",
+			],
 		);
+	});
+
+	it("Given lcursor list-models When normalizing Then it does not wrap the request in TUI mode", () => {
+		assert.deepEqual(normalizeLcursorArgs(["--list-models"]), [
+			"--list-models",
+		]);
 	});
 
 	it("Given an explicit lazycursor subcommand When normalizing Then it leaves the command unchanged", () => {
@@ -147,6 +178,23 @@ describe("parseInteractiveLcursorArgs", () => {
 				cursorAgentBin: "/tmp/fake-agent",
 			},
 		);
+	});
+
+	it("Given only a model option When parsing interactive options Then it opens the Ink TUI with that model", () => {
+		assert.deepEqual(
+			parseInteractiveLcursorArgs(["--model", "composer-2.5-fast"]),
+			{
+				kind: "interactive",
+				cursorAgentBin: "cursor-agent",
+				model: "composer-2.5-fast",
+			},
+		);
+	});
+
+	it("Given list-models When parsing interactive options Then it passes through to the lazycursor CLI", () => {
+		assert.deepEqual(parseInteractiveLcursorArgs(["--list-models"]), {
+			kind: "passthrough",
+		});
 	});
 
 	it("Given a task token When parsing interactive options Then lcursor should use the one-shot runner", () => {

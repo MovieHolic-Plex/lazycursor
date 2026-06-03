@@ -27,6 +27,14 @@ Then run ACP-enforced lazycursor from any Cursor workspace:
 lcursor "fix failing tests"
 ```
 
+Pick a Cursor Agent model when needed:
+
+```bash
+lcursor --list-models
+lcursor --model composer-2.5-fast "fix failing tests"
+lcursor --model gpt-5.3-codex-high
+```
+
 Or open the Ink TUI and type the task there:
 
 ```bash
@@ -48,6 +56,7 @@ lazycursor tui "fix failing tests"
 ```bash
 npm install -g github:MovieHolic-Plex/lazycursor
 lcursor "실패하는 테스트 수정해"
+lcursor --model composer-2.5-fast "실패하는 테스트 수정해"
 ```
 
 작업을 먼저 입력하고 싶으면 `lcursor`만 실행하면 Ink TUI가 열립니다. 이 화면은
@@ -91,6 +100,8 @@ ACP session open and enforce the same JSON state loop:
 
 ```bash
 npx github:MovieHolic-Plex/lazycursor tui "fix failing tests"
+npx github:MovieHolic-Plex/lazycursor --model composer-2.5-fast tui "fix failing tests"
+npx github:MovieHolic-Plex/lazycursor --list-models
 npx lazycursor-ai tui "fix failing tests"
 ```
 
@@ -159,6 +170,8 @@ npx lazycursor-ai install
 
 이 패키지는 `lazycursor`와 `lazycursor-ai` 실행 파일을 모두 제공합니다.
 짧은 ACP 강제 실행은 `lcursor "작업"`을 사용합니다.
+모델을 직접 고르려면 `lcursor --list-models`로 가능한 모델을 확인한 뒤
+`lcursor --model composer-2.5-fast "작업"`처럼 실행합니다.
 
 ### 강제 실행 사용법
 
@@ -248,6 +261,8 @@ runner を使います。
 
 ```bash
 npx github:MovieHolic-Plex/lazycursor tui "failing tests を修正して"
+npx github:MovieHolic-Plex/lazycursor --model composer-2.5-fast tui "failing tests を修正して"
+npx github:MovieHolic-Plex/lazycursor --list-models
 npx lazycursor-ai tui "failing tests を修正して"
 ```
 
@@ -290,6 +305,8 @@ npx lazycursor-ai install
 
 该包同时提供 `lazycursor` 和 `lazycursor-ai` 两个命令。
 最短的 ACP 强制执行命令是 `lcursor "task"`。
+如需选择模型，先运行 `lcursor --list-models`，再使用
+`lcursor --model composer-2.5-fast "task"`。
 只运行 `lcursor` 会打开 Ink TUI，包含 status HUD、obligation rail、live
 transcript、composer，以及 scroll/clear/exit 键盘操作。
 
@@ -313,6 +330,8 @@ follow-up，请使用 ACP runner：
 
 ```bash
 npx github:MovieHolic-Plex/lazycursor tui "fix failing tests"
+npx github:MovieHolic-Plex/lazycursor --model composer-2.5-fast tui "fix failing tests"
+npx github:MovieHolic-Plex/lazycursor --list-models
 npx lazycursor-ai tui "fix failing tests"
 ```
 
@@ -345,6 +364,9 @@ wrapper。
   best-effort hooks, JSON state, and AGENTS routing.
 - `lcursor <task...>`: short ACP-enforced runner, equivalent to
   `lazycursor tui <task...>`.
+- `lcursor --model <model> <task...>`: short ACP runner with explicit Cursor
+  Agent model selection.
+- `lcursor --list-models`: list models exposed by the installed Cursor Agent.
 - `lazycursor <task...>`: hard-enforced headless ultrawork runner.
 - `lazycursor run <task...>`: explicit form of the default task runner.
 - `lazycursor tui <task...>`: hard-enforced ACP runner using `cursor-agent acp`.
