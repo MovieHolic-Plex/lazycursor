@@ -1,7 +1,7 @@
 import { render, useApp, useInput } from "ink";
 import React, { useCallback, useRef, useState } from "react";
 import { createAcpConversation } from "./acp.mjs";
-import { buildCursorCommand } from "./command.mjs";
+import { buildCursorCommand, DEFAULT_CURSOR_AGENT_MODEL } from "./command.mjs";
 import {
 	getComposerText,
 	runLineInputFallback,
@@ -189,7 +189,7 @@ export function LazycursorTuiApp({
 	const composerText = getComposerText({ phase, prompt });
 	const workflowPhase = statusText.startsWith("Turn complete") ? "done" : phase;
 	const currentActivity = activityText({ lastActivity, phase: workflowPhase });
-	const todoItems = buildTodoItems(workflowPhase);
+	const workflowItems = buildTodoItems(workflowPhase);
 
 	return React.createElement(LazycursorFrame, {
 		activeTask,
@@ -197,11 +197,11 @@ export function LazycursorTuiApp({
 		composerText,
 		currentActivity,
 		cursorAgentBin,
-		model,
+		model: model ?? DEFAULT_CURSOR_AGENT_MODEL,
 		phase,
 		statusLabel: meta.label,
 		statusText,
-		todoItems,
+		todoItems: workflowItems,
 		transcript: visibleTranscript,
 		workflowPhase,
 	});

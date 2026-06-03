@@ -15,7 +15,7 @@ const USAGE = `Usage:
 
 Examples:
   lazycursor --dry-run "fix failing tests"
-  lazycursor --model composer-2.5-fast tui "fix failing tests"
+  lazycursor --model gpt-5.3-codex-high tui "fix failing tests"
   lazycursor tui "fix failing tests"
   lazycursor install --target /path/to/workspace
   lazycursor -- --version`;

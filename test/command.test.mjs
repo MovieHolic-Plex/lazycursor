@@ -43,7 +43,9 @@ describe("buildCursorCommand", () => {
 		const command = buildCursorCommand(["fix", "the", "tests"]);
 
 		assert.equal(command.bin, "cursor-agent");
-		assert.deepEqual(command.args.slice(0, 5), [
+		assert.deepEqual(command.args.slice(0, 7), [
+			"--model",
+			"composer-2.5",
 			"--print",
 			"--trust",
 			"--force",
@@ -80,15 +82,15 @@ describe("buildCursorCommand", () => {
 		const ask = buildCursorCommand(["ask", "explain", "auth"]);
 		const plan = buildCursorCommand(["plan", "migrate", "db"]);
 
-		assert.deepEqual(ask.args.slice(5), ["--mode", "ask", "explain auth"]);
-		assert.deepEqual(plan.args.slice(5), ["--mode", "plan", "migrate db"]);
+		assert.deepEqual(ask.args.slice(7), ["--mode", "ask", "explain auth"]);
+		assert.deepEqual(plan.args.slice(7), ["--mode", "plan", "migrate db"]);
 	});
 
 	it("Given a tui command When building the command Then it selects ACP mode with state enforcement", () => {
 		const command = buildCursorCommand(["tui", "fix", "the", "tests"]);
 
 		assert.equal(command.bin, "cursor-agent");
-		assert.deepEqual(command.args, ["acp"]);
+		assert.deepEqual(command.args, ["--model", "composer-2.5", "acp"]);
 		assert.equal(command.runner, "acp");
 		assert.equal(command.statePrompt, "fix the tests");
 	});
@@ -224,6 +226,10 @@ describe("buildInstallPlan", () => {
 		assert.match(plan.files[1].content, /Ultrawork mode/);
 		assert.match(plan.files[2].content, /alwaysApply: true/);
 		assert.match(plan.files[2].content, /bare `ulw` or `ultrawork`/);
+		assert.match(
+			plan.files[2].content,
+			/deep-interview -> ralplan -> ultragoal/,
+		);
 		assert.match(plan.files[3].content, /LAZYCURSOR ULTRAWORK MODE ENABLED!/);
 		assert.match(
 			plan.files[3].content,
@@ -233,7 +239,15 @@ describe("buildInstallPlan", () => {
 			plan.files[3].content,
 			/when no higher-priority instruction conflicts/,
 		);
+		assert.match(
+			plan.files[3].content,
+			/deep-interview -> ralplan -> ultragoal/,
+		);
 		assert.match(plan.files[4].content, /LAZYCURSOR STOP HOOK/);
+		assert.match(plan.files[4].content, /deep-interview/);
+		assert.match(plan.files[4].content, /ralplan/);
+		assert.match(plan.files[4].content, /ultragoal/);
+		assert.doesNotMatch(plan.files[4].content, /implementation", status/);
 	});
 
 	it("Given an existing AGENTS file When applying the install plan Then user instructions are preserved and lazycursor block is updated once", () => {

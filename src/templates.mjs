@@ -6,12 +6,13 @@ LAZYCURSOR ULTRAWORK MODE ENABLED!
 Run this request using a strict ultrawork workflow:
 
 1. Restate the target result and constraints.
-2. Define pass/fail acceptance criteria before editing.
-3. Write or identify tests before implementation.
-4. Implement the smallest correct change.
-5. Verify with tests and a real manual QA surface.
-6. Update .cursor/lazycursor/state.json as obligations are completed. Use obligation status values \`pending\` and \`done\`.
-7. Report evidence paths and cleanup.
+2. Run deep-interview when requirements are ambiguous enough to need clarification.
+3. Produce a ralplan-grade plan before broad implementation.
+4. Track and complete work through ultragoal.
+5. Use optional team execution only when parallel tmux workers help.
+6. Verify with tests and a real manual QA surface.
+7. Update .cursor/lazycursor/state.json as obligations are completed. Use obligation status values \`pending\` and \`done\`.
+8. Report evidence paths and cleanup.
 
 Treat the user's text after this command as the task.`;
 
@@ -33,10 +34,11 @@ For those requests:
 
 1. State the target result and constraints.
 2. Define concrete acceptance criteria before editing.
-3. Prefer tests before implementation when code changes are needed.
-4. Update \`.cursor/lazycursor/state.json\` as each obligation is completed; supported obligation statuses are \`pending\` and \`done\`.
-5. Run relevant tests and at least one real manual QA check.
-6. Set \`active: false\` only after every obligation is done and final evidence is reported.
+3. Follow the workflow: \`deep-interview -> ralplan -> ultragoal -> optional team execution when parallel tmux workers help\`.
+4. Prefer tests before implementation when code changes are needed.
+5. Update \`.cursor/lazycursor/state.json\` as each obligation is completed; supported obligation statuses are \`pending\` and \`done\`.
+6. Run relevant tests and at least one real manual QA check.
+7. Set \`active: false\` only after every required obligation is done and final evidence is reported.
 
 Do not launch a nested \`cursor-agent\` just because the user typed \`ulw\`. Execute the workflow in the current Cursor agent session.`;
 
@@ -51,16 +53,18 @@ When the user message starts with \`ulw\` or \`ultrawork\`, treat it as a reques
 For those requests, when no higher-priority instruction conflicts, your first visible response line MUST be exactly:
 LAZYCURSOR ULTRAWORK MODE ENABLED!
 
-If \`.cursor/lazycursor/state.json\` has \`active: true\`, do not stop while obligations are pending. Update obligation statuses from \`pending\` to \`done\` as work progresses, and set \`active: false\` only after verification and final reporting are complete.
+If \`.cursor/lazycursor/state.json\` has \`active: true\`, do not stop while required obligations are pending. Update obligation statuses from \`pending\` to \`done\` as work progresses, and set \`active: false\` only after ultragoal evidence and final reporting are complete.
 
 Then execute the workflow in the current Cursor agent session:
 
 1. Restate the target result and constraints.
 2. Define pass/fail acceptance criteria before editing.
-3. Write or identify tests before implementation when code changes are needed.
-4. Implement the smallest correct change.
-5. Verify with tests and at least one real manual QA surface.
-6. Report evidence paths and cleanup.
+3. Follow \`deep-interview -> ralplan -> ultragoal\`.
+4. Use optional team execution only when parallel tmux workers help.
+5. Write or identify tests before implementation when code changes are needed.
+6. Implement the smallest correct change.
+7. Verify with tests and at least one real manual QA surface.
+8. Report evidence paths and cleanup.
 
 Do not launch a nested \`cursor-agent\` for \`ulw\` or \`ultrawork\`.
 ${AGENTS_BLOCK_END}`;
@@ -75,10 +79,10 @@ const EVENTS_PATH = join(process.cwd(), ".cursor", "lazycursor", "events.jsonl")
 const ULW_PATTERN = /^\\s*\\/?(?:ulw|ultrawork)\\b:?\\s*([\\s\\S]*)?$/i;
 const CANCEL_PATTERN = /^\\s*\\/?(?:ulw|ultrawork)\\s+cancel\\b/i;
 const DEFAULT_OBLIGATIONS = [
-  { id: "plan", status: "pending" },
-  { id: "implementation", status: "pending" },
-  { id: "verification", status: "pending" },
-  { id: "report", status: "pending" }
+  { id: "deep-interview", status: "pending" },
+  { id: "ralplan", status: "pending" },
+  { id: "ultragoal", status: "pending" },
+  { id: "team", status: "pending", optional: true }
 ];
 
 function main() {
@@ -174,7 +178,7 @@ function handleStop() {
   }
 
   const obligations = Array.isArray(state.obligations) ? state.obligations : [];
-  const pending = obligations.filter((item) => item?.status !== "done");
+  const pending = obligations.filter((item) => item?.status !== "done" && item?.optional !== true);
   if (pending.length === 0) {
     writeState({ ...state, active: false, phase: "finished", completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     appendEvent({ event: "finish" });
@@ -188,9 +192,9 @@ function handleStop() {
   writeJson({
     followup_message: [
       "LAZYCURSOR STOP HOOK: active ultrawork state is not complete.",
-      "Read .cursor/lazycursor/state.json, finish pending obligations, and update the JSON state as evidence is completed.",
-      "Pending obligations: " + pending.map((item) => item.id).join(", "),
-      "Do not set active=false until verification and final reporting are complete."
+      "Read .cursor/lazycursor/state.json, finish required pending obligations, and update the JSON state as evidence is completed.",
+      "Required pending obligations: " + pending.map((item) => item.id).join(", "),
+      "Do not set active=false until ultragoal evidence and final reporting are complete."
     ].join("\\n")
   });
 }

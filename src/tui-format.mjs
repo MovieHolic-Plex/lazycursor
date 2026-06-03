@@ -1,4 +1,9 @@
-export const OBLIGATIONS = ["plan", "implementation", "verification", "report"];
+export const OBLIGATIONS = [
+	"deep-interview",
+	"ralplan",
+	"ultragoal",
+	"team (optional)",
+];
 export const TRANSCRIPT_LIMIT = 120;
 export const TRANSCRIPT_VIEW_SIZE = 12;
 
@@ -54,6 +59,7 @@ export function buildTodoItems(phase) {
 	return OBLIGATIONS.map((name, index) => ({
 		name,
 		status: todoStatusFor({ index, phase }),
+		optional: name.includes("optional"),
 	}));
 }
 
@@ -93,17 +99,17 @@ export function phaseMeta(phase) {
 export function entryMeta(kind) {
 	switch (kind) {
 		case "user":
-			return { color: "cyan", label: "USER" };
+			return { color: "cyan", mark: ">" };
 		case "agent":
-			return { color: "green", label: "AGENT" };
+			return { color: "green", mark: "|" };
 		case "result":
-			return { color: "yellow", label: "RESULT" };
+			return { color: "yellow", mark: "*" };
 		case "error":
-			return { color: "red", label: "ERROR" };
+			return { color: "red", mark: "!" };
 		case "system":
-			return { color: "gray", label: "SYSTEM" };
+			return { color: "gray", mark: "-" };
 		default:
-			return { color: "white", label: "LOG" };
+			return { color: "white", mark: "|" };
 	}
 }
 
@@ -134,7 +140,7 @@ function todoStatusFor({ index, phase }) {
 		return index === 0 ? "failed" : "pending";
 	}
 	if (phase === "running") {
-		return index === 0 ? "active" : "pending";
+		return index <= 1 ? "active" : "pending";
 	}
 	return "pending";
 }

@@ -7,6 +7,7 @@ import {
 } from "./state.mjs";
 
 const DEFAULT_CURSOR_AGENT_BIN = "cursor-agent";
+export const DEFAULT_CURSOR_AGENT_MODEL = "composer-2.5";
 
 const BASE_HEADLESS_ARGS = [
 	"--print",
@@ -154,7 +155,9 @@ function buildRunPrompt(prompt) {
 }
 
 function buildModelArgs(model) {
-	return typeof model === "string" && model.length > 0
-		? ["--model", model]
-		: [];
+	const selectedModel =
+		typeof model === "string" && model.length > 0
+			? model
+			: DEFAULT_CURSOR_AGENT_MODEL;
+	return ["--model", selectedModel];
 }

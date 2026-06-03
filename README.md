@@ -31,9 +31,12 @@ Pick a Cursor Agent model when needed:
 
 ```bash
 lcursor --list-models
-lcursor --model composer-2.5-fast "fix failing tests"
+lcursor --model gpt-5.3-codex-high "fix failing tests"
 lcursor --model gpt-5.3-codex-high
 ```
+
+Without `--model`, lazycursor always sends `--model composer-2.5` to Cursor
+Agent.
 
 Or open the Ink TUI and type the task there:
 
@@ -41,10 +44,11 @@ Or open the Ink TUI and type the task there:
 lcursor
 ```
 
-The TUI keeps one ACP session behind a full-screen workspace surface: status
-HUD, obligation rail, live transcript, side todo/activity panel, composer,
-scroll, clear, and exit controls. After a turn completes, keep typing to send a
-follow-up in the same session, or press `q` on an empty composer to exit.
+The TUI keeps one ACP session behind an opencode-style workspace surface:
+compact run metadata, a label-light Session stream, a Workflow panel
+(`deep-interview -> ralplan -> ultragoal -> team optional`), Input, scroll,
+clear, and exit controls. After a turn completes, keep typing to send a
+follow-up in the same session, or press `q` on an empty input to exit.
 
 Equivalent long form:
 
@@ -57,13 +61,14 @@ lazycursor tui "fix failing tests"
 ```bash
 npm install -g github:MovieHolic-Plex/lazycursor
 lcursor "실패하는 테스트 수정해"
-lcursor --model composer-2.5-fast "실패하는 테스트 수정해"
+lcursor --model gpt-5.3-codex-high "실패하는 테스트 수정해"
 ```
 
-작업을 먼저 입력하고 싶으면 `lcursor`만 실행하면 Ink TUI가 열립니다. 이 화면은
-상태 HUD, obligation rail, live transcript, side todo/activity panel, composer,
-scroll/clear/exit 키를 한 화면에서 제공합니다. 한 턴이 끝난 뒤에도 같은 ACP
-session에서 이어 입력할 수 있고, 빈 composer에서 `q`를 누르면 종료됩니다.
+기본 모델은 항상 `composer-2.5`입니다. 작업을 먼저 입력하고 싶으면 `lcursor`만
+실행하면 Ink TUI가 열립니다. 이 화면은 compact metadata, 라벨을 줄인 Session
+stream, `deep-interview -> ralplan -> ultragoal -> optional team` Workflow panel,
+Input, scroll/clear/exit 키를 한 화면에서 제공합니다. 한 턴이 끝난 뒤에도 같은 ACP
+session에서 이어 입력할 수 있고, 빈 input에서 `q`를 누르면 종료됩니다.
 
 ## English
 
@@ -102,7 +107,7 @@ ACP session open and enforce the same JSON state loop:
 
 ```bash
 npx github:MovieHolic-Plex/lazycursor tui "fix failing tests"
-npx github:MovieHolic-Plex/lazycursor --model composer-2.5-fast tui "fix failing tests"
+npx github:MovieHolic-Plex/lazycursor --model gpt-5.3-codex-high tui "fix failing tests"
 npx github:MovieHolic-Plex/lazycursor --list-models
 npx lazycursor-ai tui "fix failing tests"
 ```
@@ -112,12 +117,14 @@ During those runs, lazycursor writes:
 - `.cursor/lazycursor/state.json`
 - `.cursor/lazycursor/events.jsonl`
 
-The default obligations are `plan`, `implementation`, `verification`, and
-`report`. Each obligation starts as `pending` and must become `done` before the
-wrapper allows the workflow to finish. If obligations remain pending after a
-headless Cursor Agent run, the wrapper sends a `LAZYCURSOR STOP WRAPPER`
-follow-up. If obligations remain pending in ACP mode, it sends a
-`LAZYCURSOR STOP ACP` follow-up inside the same ACP session.
+The default workflow obligations are `deep-interview`, `ralplan`, `ultragoal`,
+and optional `team`. Required obligations start as `pending` and must become
+`done` before the wrapper allows the workflow to finish. Optional `team`
+execution is tracked when useful, but it does not block completion by itself. If
+required obligations remain pending after a headless Cursor Agent run, the
+wrapper sends a `LAZYCURSOR STOP WRAPPER` follow-up. If required obligations
+remain pending in ACP mode, it sends a `LAZYCURSOR STOP ACP` follow-up inside
+the same ACP session.
 
 ### Stock Cursor Agent TUI Usage
 
@@ -146,8 +153,9 @@ same JSON state. If it does not, use `lazycursor tui ...` or the headless
 wrapper commands above for hard enforcement.
 
 The `lcursor` no-argument TUI keeps the ACP session open across turns. Use the
-side todo/activity panel to see the current phase, obligation checklist, and the
-latest agent activity while the transcript streams.
+Workflow panel to see `deep-interview -> ralplan -> ultragoal -> optional team`,
+the current phase, and the latest agent activity while the Session stream
+updates without repeated role labels.
 
 ### Other Commands
 
@@ -177,7 +185,8 @@ npx lazycursor-ai install
 이 패키지는 `lazycursor`와 `lazycursor-ai` 실행 파일을 모두 제공합니다.
 짧은 ACP 강제 실행은 `lcursor "작업"`을 사용합니다.
 모델을 직접 고르려면 `lcursor --list-models`로 가능한 모델을 확인한 뒤
-`lcursor --model composer-2.5-fast "작업"`처럼 실행합니다.
+`lcursor --model gpt-5.3-codex-high "작업"`처럼 실행합니다. 기본 모델은
+`composer-2.5`입니다.
 
 ### 강제 실행 사용법
 
@@ -203,11 +212,12 @@ npx lazycursor-ai tui "실패하는 테스트 수정해"
 ```
 
 이 경로에서는 lazycursor가 `.cursor/lazycursor/state.json`을 `active: true`로
-만든 뒤 Cursor Agent를 실행합니다. 실행 후 `plan`, `implementation`,
-`verification`, `report` obligation 중 하나라도 `pending`이면
-headless 모드에서는 `LAZYCURSOR STOP WRAPPER`, ACP 모드에서는
-`LAZYCURSOR STOP ACP` follow-up을 다시 넣습니다. 모든 obligation이 `done`이 되면
-state를 `active: false`, `phase: "finished"`로 닫습니다.
+만든 뒤 Cursor Agent를 실행합니다. 실행 후 required obligation인
+`deep-interview`, `ralplan`, `ultragoal` 중 하나라도 `pending`이면 headless
+모드에서는 `LAZYCURSOR STOP WRAPPER`, ACP 모드에서는 `LAZYCURSOR STOP ACP`
+follow-up을 다시 넣습니다. optional `team`은 추적하지만 단독으로 완료를 막지
+않습니다. required obligation이 `done`이 되면 state를 `active: false`,
+`phase: "finished"`로 닫습니다.
 
 ### 기본 Cursor Agent TUI 사용법
 
@@ -245,8 +255,8 @@ npx lazycursor-ai install
 
 このパッケージは `lazycursor` と `lazycursor-ai` の両方のコマンドを提供します。
 短い ACP 強制実行には `lcursor "task"` を使います。
-`lcursor` だけで起動すると、status HUD、obligation rail、live transcript、
-composer、scroll/clear/exit 操作を備えた Ink TUI が開きます。
+`lcursor` だけで起動すると、compact metadata、label-light Session stream、
+Workflow panel、Input、scroll/clear/exit 操作を備えた Ink TUI が開きます。
 turn 完了後も同じ ACP session に follow-up を入力できます。
 
 ### 強制付きラッパーの使い方
@@ -268,15 +278,16 @@ runner を使います。
 
 ```bash
 npx github:MovieHolic-Plex/lazycursor tui "failing tests を修正して"
-npx github:MovieHolic-Plex/lazycursor --model composer-2.5-fast tui "failing tests を修正して"
+npx github:MovieHolic-Plex/lazycursor --model gpt-5.3-codex-high tui "failing tests を修正して"
 npx github:MovieHolic-Plex/lazycursor --list-models
 npx lazycursor-ai tui "failing tests を修正して"
 ```
 
-この経路では `.cursor/lazycursor/state.json` が active になり、`plan`,
-`implementation`, `verification`, `report` がすべて `done` になるまで
+この経路では `.cursor/lazycursor/state.json` が active になり、required
+obligation の `deep-interview`, `ralplan`, `ultragoal` がすべて `done` になるまで
 headless mode では `LAZYCURSOR STOP WRAPPER`、ACP mode では
-`LAZYCURSOR STOP ACP` follow-up が送られます。
+`LAZYCURSOR STOP ACP` follow-up が送られます。optional `team` は追跡されますが、
+単独では完了をブロックしません。
 
 ### 通常の Cursor Agent TUI での使い方
 
@@ -313,9 +324,9 @@ npx lazycursor-ai install
 该包同时提供 `lazycursor` 和 `lazycursor-ai` 两个命令。
 最短的 ACP 强制执行命令是 `lcursor "task"`。
 如需选择模型，先运行 `lcursor --list-models`，再使用
-`lcursor --model composer-2.5-fast "task"`。
-只运行 `lcursor` 会打开 Ink TUI，包含 status HUD、obligation rail、live
-transcript、composer，以及 scroll/clear/exit 键盘操作。
+`lcursor --model gpt-5.3-codex-high "task"`。默认模型始终是 `composer-2.5`。
+只运行 `lcursor` 会打开 Ink TUI，包含 compact metadata、label-light Session
+stream、Workflow panel、Input，以及 scroll/clear/exit 键盘操作。
 每一轮结束后可以继续输入 follow-up，并保持同一个 ACP session。
 
 ### 强制执行用法
@@ -338,16 +349,17 @@ follow-up，请使用 ACP runner：
 
 ```bash
 npx github:MovieHolic-Plex/lazycursor tui "fix failing tests"
-npx github:MovieHolic-Plex/lazycursor --model composer-2.5-fast tui "fix failing tests"
+npx github:MovieHolic-Plex/lazycursor --model gpt-5.3-codex-high tui "fix failing tests"
 npx github:MovieHolic-Plex/lazycursor --list-models
 npx lazycursor-ai tui "fix failing tests"
 ```
 
-该路径会激活 `.cursor/lazycursor/state.json`。只要 `plan`,
-`implementation`, `verification`, `report` 中还有 `pending` obligation，wrapper
-在 headless mode 会再次发送 `LAZYCURSOR STOP WRAPPER` follow-up，在 ACP mode 会发送
-`LAZYCURSOR STOP ACP` follow-up。全部变成 `done` 后，state 会被关闭为
-`active: false` 和 `phase: "finished"`。
+该路径会激活 `.cursor/lazycursor/state.json`。只要 required obligation
+`deep-interview`, `ralplan`, `ultragoal` 中还有 `pending`，wrapper 在 headless mode
+会再次发送 `LAZYCURSOR STOP WRAPPER` follow-up，在 ACP mode 会发送
+`LAZYCURSOR STOP ACP` follow-up。optional `team` 会被记录，但不会单独阻止完成。
+required obligation 全部变成 `done` 后，state 会被关闭为 `active: false` 和
+`phase: "finished"`。
 
 ### 默认 Cursor Agent TUI 用法
 
@@ -371,7 +383,7 @@ wrapper。
 - `lazycursor install [--target <workspace>]`: install Cursor commands, rules,
   best-effort hooks, JSON state, and AGENTS routing.
 - `lcursor <task...>`: short ACP-enforced runner, equivalent to
-  `lazycursor tui <task...>`.
+  `lazycursor tui <task...>`. Uses `composer-2.5` unless `--model` overrides it.
 - `lcursor --model <model> <task...>`: short ACP runner with explicit Cursor
   Agent model selection.
 - `lcursor --list-models`: list models exposed by the installed Cursor Agent.

@@ -8,10 +8,10 @@ import {
 import { dirname, join, resolve } from "node:path";
 
 export const DEFAULT_OBLIGATIONS = [
-	{ id: "plan", status: "pending" },
-	{ id: "implementation", status: "pending" },
-	{ id: "verification", status: "pending" },
-	{ id: "report", status: "pending" },
+	{ id: "deep-interview", status: "pending" },
+	{ id: "ralplan", status: "pending" },
+	{ id: "ultragoal", status: "pending" },
+	{ id: "team", status: "pending", optional: true },
 ];
 
 export const INITIAL_STATE = {
@@ -68,7 +68,9 @@ export function inspectLazycursorStop(
 	}
 
 	const obligations = Array.isArray(state.obligations) ? state.obligations : [];
-	const pending = obligations.filter((item) => item?.status !== "done");
+	const pending = obligations.filter(
+		(item) => item?.status !== "done" && item?.optional !== true,
+	);
 	if (pending.length === 0) {
 		const now = new Date().toISOString();
 		const nextState = {
@@ -106,9 +108,9 @@ export function inspectLazycursorStop(
 export function buildStopFollowup(pending, label = "WRAPPER") {
 	return [
 		`LAZYCURSOR STOP ${label}: active ultrawork state is not complete.`,
-		"Read .cursor/lazycursor/state.json, finish pending obligations, and update the JSON state as evidence is completed.",
-		`Pending obligations: ${pending.map((item) => item.id).join(", ")}`,
-		"Do not set active=false until verification and final reporting are complete.",
+		"Read .cursor/lazycursor/state.json, finish required pending obligations, and update the JSON state as evidence is completed.",
+		`Required pending obligations: ${pending.map((item) => item.id).join(", ")}`,
+		"Do not set active=false until ultragoal evidence and final reporting are complete.",
 	].join("\n");
 }
 

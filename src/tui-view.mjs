@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 import React from "react";
-import { entryMeta, OBLIGATIONS } from "./tui-format.mjs";
+import { entryMeta } from "./tui-format.mjs";
 
 export function LazycursorFrame({
 	activeTask,
@@ -21,9 +21,6 @@ export function LazycursorFrame({
 		{ flexDirection: "column", paddingX: 1 },
 		React.createElement(Header, { label: statusLabel, color }),
 		React.createElement(StatusRail, { activeTask, cursorAgentBin, model }),
-		React.createElement(ObligationRail, {
-			completed: workflowPhase === "done",
-		}),
 		React.createElement(
 			Box,
 			{ flexDirection: "row", gap: 1 },
@@ -69,40 +66,26 @@ function StatusRail({ activeTask, cursorAgentBin, model }) {
 		React.createElement(
 			Text,
 			null,
-			React.createElement(Text, { color: "gray" }, "runner: "),
+			React.createElement(Text, { color: "gray" }, "runner "),
 			cursorAgentBin,
 		),
 		React.createElement(
 			Text,
 			null,
-			React.createElement(Text, { color: "gray" }, "mode: "),
+			React.createElement(Text, { color: "gray" }, "mode "),
 			"json-state stop-loop",
 		),
 		React.createElement(
 			Text,
 			null,
-			React.createElement(Text, { color: "gray" }, "model: "),
-			model ?? "cursor default",
+			React.createElement(Text, { color: "gray" }, "model "),
+			model,
 		),
 		React.createElement(
 			Text,
 			null,
 			React.createElement(Text, { color: "gray" }, "task: "),
 			activeTask || "-",
-		),
-	);
-}
-
-function ObligationRail({ completed }) {
-	return React.createElement(
-		Box,
-		{ gap: 1, marginTop: 1 },
-		...OBLIGATIONS.map((obligation) =>
-			React.createElement(
-				Text,
-				{ key: obligation, color: completed ? "green" : "yellow" },
-				`[${obligation}]`,
-			),
 		),
 	);
 }
@@ -118,7 +101,7 @@ function TranscriptPanel({ color, entries }) {
 			marginTop: 1,
 			paddingX: 1,
 		},
-		React.createElement(Text, { bold: true }, "Transcript"),
+		React.createElement(Text, { bold: true }, "Session"),
 		...entries.map((entry, index) =>
 			React.createElement(TranscriptLine, {
 				entry,
@@ -139,7 +122,7 @@ function TodoPanel({ activity, color, items, phase }) {
 			paddingX: 1,
 			width: 32,
 		},
-		React.createElement(Text, { bold: true }, "Todo"),
+		React.createElement(Text, { bold: true }, "Workflow"),
 		React.createElement(
 			Text,
 			{ color: "gray" },
@@ -167,7 +150,7 @@ function ComposerPanel({ phase, text }) {
 			marginTop: 1,
 			paddingX: 1,
 		},
-		React.createElement(Text, { color: "gray" }, "Composer"),
+		React.createElement(Text, { color: "gray" }, "Input"),
 		React.createElement(
 			Text,
 			{ color: phase === "editing" ? "white" : "gray" },
@@ -181,8 +164,8 @@ function TranscriptLine({ entry }) {
 	return React.createElement(
 		Box,
 		null,
-		React.createElement(Text, { bold: true, color: meta.color }, meta.label),
-		React.createElement(Text, null, "  "),
+		React.createElement(Text, { color: meta.color }, meta.mark),
+		React.createElement(Text, null, " "),
 		React.createElement(Text, null, entry.text),
 	);
 }

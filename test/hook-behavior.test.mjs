@@ -56,6 +56,11 @@ describe("Cursor hook behavior", () => {
 			const state = readState(fixture);
 			assert.equal(state.active, true);
 			assert.equal(state.prompt, "fix tests");
+			assert.deepEqual(
+				state.obligations.map((item) => item.id),
+				["deep-interview", "ralplan", "ultragoal", "team"],
+			);
+			assert.equal(state.obligations[3].optional, true);
 			assert.equal(state.obligations[0].status, "pending");
 
 			const stopResult = runHook(fixture, "stop");
@@ -63,7 +68,10 @@ describe("Cursor hook behavior", () => {
 
 			assert.equal(stopResult.status, 0);
 			assert.match(stopOutput.followup_message, /LAZYCURSOR STOP HOOK/);
-			assert.match(stopOutput.followup_message, /plan/);
+			assert.match(stopOutput.followup_message, /deep-interview/);
+			assert.match(stopOutput.followup_message, /ralplan/);
+			assert.match(stopOutput.followup_message, /ultragoal/);
+			assert.doesNotMatch(stopOutput.followup_message, /team/);
 		} finally {
 			rmSync(fixture.target, { recursive: true, force: true });
 		}
@@ -111,11 +119,11 @@ describe("Cursor hook behavior", () => {
 					{
 						active: true,
 						mode: "ulw",
-						phase: "implementation",
+						phase: "ultragoal",
 						prompt: "original task",
 						obligations: [
-							{ id: "plan", status: "done" },
-							{ id: "implementation", status: "pending" },
+							{ id: "deep-interview", status: "done" },
+							{ id: "ralplan", status: "pending" },
 						],
 						stopLoopCount: 3,
 					},
@@ -191,7 +199,7 @@ describe("Cursor hook behavior", () => {
 		}
 	});
 
-	it("Given all obligations are done When the stop hook runs Then JSON state is finished without a follow-up", () => {
+	it("Given required obligations are done When the stop hook runs Then optional team does not block finish", () => {
 		const fixture = installFixture();
 		try {
 			writeFileSync(
@@ -200,12 +208,12 @@ describe("Cursor hook behavior", () => {
 					{
 						active: true,
 						mode: "ulw",
-						phase: "verification",
+						phase: "ultragoal",
 						obligations: [
-							{ id: "plan", status: "done" },
-							{ id: "implementation", status: "done" },
-							{ id: "verification", status: "done" },
-							{ id: "report", status: "done" },
+							{ id: "deep-interview", status: "done" },
+							{ id: "ralplan", status: "done" },
+							{ id: "ultragoal", status: "done" },
+							{ id: "team", status: "pending", optional: true },
 						],
 						stopLoopCount: 0,
 					},

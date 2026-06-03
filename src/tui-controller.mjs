@@ -31,11 +31,11 @@ export function getComposerText({ phase, prompt }) {
 		case "editing":
 			return prompt.length > 0 ? `${prompt}_` : "Type an ultrawork task...";
 		case "running":
-			return "Agent is running. Transcript is live.";
+			return "Agent is running. Session stream is live.";
 		case "done":
 			return "Run complete. Press q or Enter to exit.";
 		case "failed":
-			return "Run failed. Transcript is retained.";
+			return "Run failed. Session stream is retained.";
 		default:
 			return "Waiting for input.";
 	}

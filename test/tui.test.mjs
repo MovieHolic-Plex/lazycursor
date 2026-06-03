@@ -21,10 +21,14 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		const app = render(React.createElement(LazycursorTuiApp));
 
 		assert.match(app.lastFrame() ?? "", /ACP ultrawork/);
-		assert.match(app.lastFrame() ?? "", /Transcript/);
-		assert.match(app.lastFrame() ?? "", /Todo/);
+		assert.match(app.lastFrame() ?? "", /Session/);
+		assert.match(app.lastFrame() ?? "", /Workflow/);
+		assert.match(app.lastFrame() ?? "", /model composer-2\.5/);
+		assert.match(app.lastFrame() ?? "", /deep-interview/);
+		assert.match(app.lastFrame() ?? "", /ralplan/);
+		assert.match(app.lastFrame() ?? "", /ultragoal/);
 		assert.match(app.lastFrame() ?? "", /Now: Waiting for task input/);
-		assert.match(app.lastFrame() ?? "", /Composer/);
+		assert.match(app.lastFrame() ?? "", /Input/);
 		assert.match(app.lastFrame() ?? "", /Enter submit/);
 
 		app.unmount();
@@ -39,9 +43,9 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		);
 
 		const frame = app.lastFrame() ?? "";
-		assert.match(frame, /runner: \/tmp\/fake-acp-agent\.mjs/);
-		assert.match(frame, /mode: json-state stop-loop/);
-		assert.match(frame, /model: composer-2\.5-fast/);
+		assert.match(frame, /runner \/tmp\/fake-acp-agent\.mjs/);
+		assert.match(frame, /mode json-state stop-loop/);
+		assert.match(frame, /model composer-2\.5-fast/);
 		assert.match(frame, /task: -/);
 		assert.doesNotMatch(frame, /runner\/tmp/);
 		assert.doesNotMatch(frame, /modejson-state/);
@@ -86,8 +90,7 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		});
 		assert.equal(exitStatus, 0);
 		assert.match(app.lastFrame() ?? "", /agent chunk/);
-		assert.match(app.lastFrame() ?? "", /USER/);
-		assert.match(app.lastFrame() ?? "", /AGENT/);
+		assert.doesNotMatch(app.lastFrame() ?? "", /USER|AGENT|RESULT/);
 		assert.match(app.lastFrame() ?? "", /Turn complete/);
 
 		app.unmount();
@@ -139,6 +142,7 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		await waitFor(() => closed, "conversation close");
 
 		assert.equal(commands.length, 1);
+		assert.deepEqual(commands[0].args, ["--model", "composer-2.5", "acp"]);
 		assert.deepEqual(prompts, ["first task", "second task"]);
 
 		app.unmount();
@@ -194,7 +198,7 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		const frame = app.lastFrame() ?? "";
 		assert.match(frame, /뒤, 개선합니다/);
 		assert.match(frame, /다음 줄/);
-		assert.equal(frame.match(/AGENT/g)?.length, 2);
+		assert.doesNotMatch(frame, /AGENT|USER|RESULT/);
 
 		app.unmount();
 	});
