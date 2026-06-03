@@ -54,6 +54,7 @@ describe("repository hygiene", () => {
 			"credentials.*",
 			"config.local.*",
 			"coverage/",
+			".cursor/lazycursor/",
 		]) {
 			assert.match(
 				gitignore,

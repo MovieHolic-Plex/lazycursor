@@ -1,8 +1,14 @@
-import { Box, render, Text, useApp, useInput } from "ink";
+import { render, useApp, useInput } from "ink";
 import React, { useCallback, useState } from "react";
 import { buildCursorCommand, runCursorCommand } from "./command.mjs";
-
-const MAX_LOG_LINES = 12;
+import {
+	appendTranscript,
+	createInitialTranscript,
+	getVisibleTranscript,
+	nextScrollOffset,
+	phaseMeta,
+} from "./tui-format.mjs";
+import { LazycursorFrame } from "./tui-view.mjs";
 
 export async function runInteractiveTui(options = {}) {
 	if (!process.stdin.isTTY) {
@@ -57,10 +63,13 @@ export function LazycursorTuiApp({
 	const [prompt, setPrompt] = useState("");
 	const [phase, setPhase] = useState("editing");
 	const [statusText, setStatusText] = useState("Enter an ultrawork task");
-	const [logs, setLogs] = useState([]);
+	const [submittedTask, setSubmittedTask] = useState("");
+	const [scrollOffset, setScrollOffset] = useState(0);
+	const [transcript, setTranscript] = useState(createInitialTranscript);
 
-	const appendLog = useCallback((text) => {
-		setLogs((current) => trimLogLines([...current, ...splitOutput(text)]));
+	const appendEntry = useCallback((kind, text) => {
+		setScrollOffset(0);
+		setTranscript((current) => appendTranscript(current, kind, text));
 	}, []);
 
 	const submit = useCallback(
@@ -72,10 +81,15 @@ export function LazycursorTuiApp({
 
 			setPhase("running");
 			setStatusText("Running ACP ultrawork");
-			setLogs([`> ${task}`]);
+			setSubmittedTask(task);
+			setPrompt("");
+			setScrollOffset(0);
+			setTranscript(appendTranscript(createInitialTranscript(), "user", task));
 
 			const command = buildCursorCommand(["tui", task], { cursorAgentBin });
-			void runCommand(command, { onOutput: appendLog })
+			void runCommand(command, {
+				onOutput: (text) => appendEntry("agent", text),
+			})
 				.then((status) => {
 					const nextPhase = status === 0 ? "done" : "failed";
 					setPhase(nextPhase);
@@ -83,6 +97,12 @@ export function LazycursorTuiApp({
 						status === 0
 							? "Done. Press q or Enter to exit."
 							: `Failed with exit status ${status}. Press q or Enter to exit.`,
+					);
+					appendEntry(
+						status === 0 ? "result" : "error",
+						status === 0
+							? "Done. All lazycursor obligations are closed."
+							: `Failed with exit status ${status}.`,
 					);
 					onExitStatus?.(status);
 					if (autoExit) {
@@ -94,7 +114,10 @@ export function LazycursorTuiApp({
 					setStatusText(
 						"Failed with an ACP runner error. Press q or Enter to exit.",
 					);
-					appendLog(error instanceof Error ? error.message : String(error));
+					appendEntry(
+						"error",
+						error instanceof Error ? error.message : String(error),
+					);
 					onExitStatus?.(1);
 					if (autoExit) {
 						setTimeout(exit, 0);
@@ -102,7 +125,7 @@ export function LazycursorTuiApp({
 				});
 		},
 		[
-			appendLog,
+			appendEntry,
 			autoExit,
 			cursorAgentBin,
 			exit,
@@ -118,6 +141,26 @@ export function LazycursorTuiApp({
 			if (key.ctrl && input === "c") {
 				onExitStatus?.(130);
 				exit();
+				return;
+			}
+
+			if (key.ctrl && input === "l") {
+				setTranscript(createInitialTranscript());
+				setScrollOffset(0);
+				return;
+			}
+
+			if (key.upArrow) {
+				setScrollOffset((current) =>
+					nextScrollOffset(current, "up", transcript),
+				);
+				return;
+			}
+
+			if (key.downArrow) {
+				setScrollOffset((current) =>
+					nextScrollOffset(current, "down", transcript),
+				);
 				return;
 			}
 
@@ -155,51 +198,34 @@ export function LazycursorTuiApp({
 		{ isActive: true },
 	);
 
-	return React.createElement(
-		Box,
-		{ flexDirection: "column" },
-		React.createElement(
-			Text,
-			{ bold: true, color: phaseColor(phase) },
-			"lazycursor",
-		),
-		React.createElement(Text, null, statusText),
-		React.createElement(Text, null, `Task: ${prompt}`),
-		React.createElement(
-			Text,
-			null,
-			"Obligations: plan -> implementation -> verification -> report",
-		),
-		React.createElement(
-			Box,
-			{ flexDirection: "column", marginTop: 1 },
-			...logs.map((line, index) =>
-				React.createElement(Text, { key: `${index}:${line}` }, line),
-			),
-		),
-	);
+	const meta = phaseMeta(phase);
+	const visibleTranscript = getVisibleTranscript(transcript, scrollOffset);
+	const activeTask = submittedTask.length > 0 ? submittedTask : prompt;
+	const composerText = getComposerText({ phase, prompt });
+
+	return React.createElement(LazycursorFrame, {
+		activeTask,
+		color: meta.color,
+		composerText,
+		cursorAgentBin,
+		phase,
+		statusLabel: meta.label,
+		statusText,
+		transcript: visibleTranscript,
+	});
 }
 
-function phaseColor(phase) {
-	if (phase === "done") {
-		return "green";
+function getComposerText({ phase, prompt }) {
+	switch (phase) {
+		case "editing":
+			return prompt.length > 0 ? `${prompt}_` : "Type an ultrawork task...";
+		case "running":
+			return "Agent is running. Transcript is live.";
+		case "done":
+			return "Run complete. Press q or Enter to exit.";
+		case "failed":
+			return "Run failed. Transcript is retained.";
+		default:
+			return "Waiting for input.";
 	}
-	if (phase === "failed") {
-		return "red";
-	}
-	if (phase === "running") {
-		return "yellow";
-	}
-	return "cyan";
-}
-
-function splitOutput(text) {
-	return text
-		.split(/\r?\n/)
-		.map((line) => line.trimEnd())
-		.filter((line) => line.length > 0);
-}
-
-function trimLogLines(lines) {
-	return lines.slice(Math.max(0, lines.length - MAX_LOG_LINES));
 }

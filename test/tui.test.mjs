@@ -17,6 +17,35 @@ async function waitFor(check, label) {
 }
 
 describe("LazycursorTuiApp", { concurrency: false }, () => {
+	it("Given an empty TUI When it opens Then it renders an ACP workspace HUD and composer", async () => {
+		const app = render(React.createElement(LazycursorTuiApp));
+
+		assert.match(app.lastFrame() ?? "", /ACP ultrawork/);
+		assert.match(app.lastFrame() ?? "", /Transcript/);
+		assert.match(app.lastFrame() ?? "", /Composer/);
+		assert.match(app.lastFrame() ?? "", /Enter submit/);
+
+		app.unmount();
+	});
+
+	it("Given a narrow TUI When metadata renders Then status labels and values remain separated", async () => {
+		const app = render(
+			React.createElement(LazycursorTuiApp, {
+				cursorAgentBin: "/tmp/fake-acp-agent.mjs",
+			}),
+		);
+
+		const frame = app.lastFrame() ?? "";
+		assert.match(frame, /runner: \/tmp\/fake-acp-agent\.mjs/);
+		assert.match(frame, /mode: json-state stop-loop/);
+		assert.match(frame, /task: -/);
+		assert.doesNotMatch(frame, /runner\/tmp/);
+		assert.doesNotMatch(frame, /modejson-state/);
+		assert.doesNotMatch(frame, /stop-looptask/);
+
+		app.unmount();
+	});
+
 	it("Given typed input When the user presses enter Then it runs the ACP command and renders streamed output", async () => {
 		const calls = [];
 		let exitStatus;
@@ -52,6 +81,9 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		});
 		assert.equal(exitStatus, 0);
 		assert.match(app.lastFrame() ?? "", /agent chunk/);
+		assert.match(app.lastFrame() ?? "", /USER/);
+		assert.match(app.lastFrame() ?? "", /AGENT/);
+		assert.match(app.lastFrame() ?? "", /DONE/);
 
 		app.unmount();
 	});
@@ -73,6 +105,39 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		);
 
 		assert.match(app.lastFrame() ?? "", /Failed with exit status 7/);
+		assert.match(app.lastFrame() ?? "", /FAILED/);
+		app.unmount();
+	});
+
+	it("Given transcript output When the user clears the panel Then the initial prompt returns", async () => {
+		const runCommand = async (_command, options) => {
+			options.onOutput("temporary chunk\n");
+			return 0;
+		};
+		const app = render(
+			React.createElement(LazycursorTuiApp, {
+				autoExit: false,
+				runCommand,
+			}),
+		);
+
+		app.stdin.write("clear me\r");
+
+		await waitFor(
+			() => app.lastFrame()?.includes("temporary chunk"),
+			"transcript output",
+		);
+
+		app.stdin.write("\x0c");
+
+		await waitFor(
+			() =>
+				(app.lastFrame()?.includes("Ready. Type a task and press Enter.") ??
+					false) &&
+				!app.lastFrame()?.includes("temporary chunk"),
+			"cleared transcript",
+		);
+
 		app.unmount();
 	});
 });

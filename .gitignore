@@ -7,3 +7,4 @@ credentials.*
 config.local.*
 coverage/
 .omx/
+.cursor/lazycursor/

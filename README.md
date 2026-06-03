@@ -27,11 +27,15 @@ Then run ACP-enforced lazycursor from any Cursor workspace:
 lcursor "fix failing tests"
 ```
 
-Or open the Ink mini TUI and type the task there:
+Or open the Ink TUI and type the task there:
 
 ```bash
 lcursor
 ```
+
+The TUI keeps the ACP session behind a full-screen workspace surface: status
+HUD, obligation rail, live transcript, composer, scroll, clear, and exit
+controls.
 
 Equivalent long form:
 
@@ -46,7 +50,9 @@ npm install -g github:MovieHolic-Plex/lazycursor
 lcursor "실패하는 테스트 수정해"
 ```
 
-작업을 먼저 입력하고 싶으면 `lcursor`만 실행하면 Ink mini TUI가 열립니다.
+작업을 먼저 입력하고 싶으면 `lcursor`만 실행하면 Ink TUI가 열립니다. 이 화면은
+상태 HUD, obligation rail, live transcript, composer, scroll/clear/exit 키를
+한 화면에서 제공합니다.
 
 ## English
 
@@ -220,6 +226,8 @@ npx lazycursor-ai install
 
 このパッケージは `lazycursor` と `lazycursor-ai` の両方のコマンドを提供します。
 短い ACP 強制実行には `lcursor "task"` を使います。
+`lcursor` だけで起動すると、status HUD、obligation rail、live transcript、
+composer、scroll/clear/exit 操作を備えた Ink TUI が開きます。
 
 ### 強制付きラッパーの使い方
 
@@ -282,6 +290,8 @@ npx lazycursor-ai install
 
 该包同时提供 `lazycursor` 和 `lazycursor-ai` 两个命令。
 最短的 ACP 强制执行命令是 `lcursor "task"`。
+只运行 `lcursor` 会打开 Ink TUI，包含 status HUD、obligation rail、live
+transcript、composer，以及 scroll/clear/exit 键盘操作。
 
 ### 强制执行用法
 

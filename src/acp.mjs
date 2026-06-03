@@ -74,7 +74,7 @@ class AcpClient {
 				fs: { readTextFile: false, writeTextFile: false },
 				terminal: false,
 			},
-			clientInfo: { name: "lazycursor", version: "0.5.0" },
+			clientInfo: { name: "lazycursor", version: "0.6.0" },
 		});
 		await this.request("authenticate", { methodId: "cursor_login" });
 		return this.request("session/new", { cwd, mcpServers: [] });
