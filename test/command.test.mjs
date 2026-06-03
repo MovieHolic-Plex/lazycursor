@@ -15,6 +15,7 @@ import { describe, it } from "node:test";
 import {
 	buildCursorCommand,
 	formatDryRunCommand,
+	normalizeLcursorArgs,
 	parseLazycursorArgs,
 } from "../src/command.mjs";
 import { applyInstallPlan, buildInstallPlan } from "../src/install.mjs";
@@ -96,6 +97,36 @@ describe("formatDryRunCommand", () => {
 			}),
 			"cursor-agent --print 'ultrawork: fix tests'",
 		);
+	});
+});
+
+describe("normalizeLcursorArgs", () => {
+	it("Given a plain lcursor task When normalizing Then it defaults to the ACP tui runner", () => {
+		assert.deepEqual(normalizeLcursorArgs(["fix", "the", "tests"]), [
+			"tui",
+			"fix",
+			"the",
+			"tests",
+		]);
+	});
+
+	it("Given lcursor options before a task When normalizing Then it preserves options and inserts tui before the task", () => {
+		assert.deepEqual(
+			normalizeLcursorArgs([
+				"--dry-run",
+				"--cursor-agent-bin",
+				"/tmp/fake",
+				"fix",
+				"tests",
+			]),
+			["--dry-run", "--cursor-agent-bin", "/tmp/fake", "tui", "fix", "tests"],
+		);
+	});
+
+	it("Given an explicit lazycursor subcommand When normalizing Then it leaves the command unchanged", () => {
+		assert.deepEqual(normalizeLcursorArgs(["install"]), ["install"]);
+		assert.deepEqual(normalizeLcursorArgs(["ulw", "fix"]), ["ulw", "fix"]);
+		assert.deepEqual(normalizeLcursorArgs(["tui", "fix"]), ["tui", "fix"]);
 	});
 });
 
@@ -234,8 +265,9 @@ describe("buildInstallPlan", () => {
 });
 
 describe("package metadata", () => {
-	it("Given npm execution When resolving bins Then lazycursor and lazycursor-ai point at the same wrapper", () => {
+	it("Given npm execution When resolving bins Then the package exposes full and short wrappers", () => {
 		assert.deepEqual(packageJson.bin, {
+			lcursor: "bin/lcursor.js",
 			lazycursor: "bin/lazycursor-ai.js",
 			"lazycursor-ai": "bin/lazycursor-ai.js",
 		});

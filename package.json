@@ -1,9 +1,10 @@
 {
 	"name": "lazycursor-ai",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "Cursor Agent ultrawork command installer inspired by lazycodex.",
 	"type": "module",
 	"bin": {
+		"lcursor": "bin/lcursor.js",
 		"lazycursor": "bin/lazycursor-ai.js",
 		"lazycursor-ai": "bin/lazycursor-ai.js"
 	},

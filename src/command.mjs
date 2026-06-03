@@ -31,6 +31,16 @@ Examples:
   lazycursor install --target /path/to/workspace
   lazycursor -- --version`;
 
+const LCURSOR_PASSTHROUGH_COMMANDS = new Set([
+	"install",
+	"run",
+	"tui",
+	"ulw",
+	"ultrawork",
+	"ask",
+	"plan",
+]);
+
 export function buildCursorCommand(argv, options = {}) {
 	const bin = options.cursorAgentBin ?? DEFAULT_CURSOR_AGENT_BIN;
 
@@ -163,6 +173,37 @@ export function parseLazycursorArgs(argv) {
 		dryRun,
 		command: buildCursorCommand(args, { cursorAgentBin }),
 	};
+}
+
+export function normalizeLcursorArgs(argv) {
+	if (argv.length === 0) {
+		return ["--help"];
+	}
+
+	for (let index = 0; index < argv.length; index += 1) {
+		const value = argv[index];
+
+		if (value === "--" || value === "--help" || value === "-h") {
+			return argv;
+		}
+
+		if (value === "--dry-run") {
+			continue;
+		}
+
+		if (value === "--cursor-agent-bin" || value === "--target") {
+			index += 1;
+			continue;
+		}
+
+		if (LCURSOR_PASSTHROUGH_COMMANDS.has(value)) {
+			return argv;
+		}
+
+		return [...argv.slice(0, index), "tui", ...argv.slice(index)];
+	}
+
+	return ["--help"];
 }
 
 export function formatDryRunCommand(command) {

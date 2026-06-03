@@ -13,6 +13,33 @@ surface in Cursor today: lazycursor owns the client loop and Cursor Agent runs
 as an ACP server. Stock Cursor Agent TUI usage is still supported as soft
 routing through installed commands, rules, and `AGENTS.md`.
 
+## Shortest Usage
+
+Install once:
+
+```bash
+npm install -g github:MovieHolic-Plex/lazycursor
+```
+
+Then run ACP-enforced lazycursor from any Cursor workspace:
+
+```bash
+lcursor "fix failing tests"
+```
+
+Equivalent long form:
+
+```bash
+lazycursor tui "fix failing tests"
+```
+
+한국어로 줄이면:
+
+```bash
+npm install -g github:MovieHolic-Plex/lazycursor
+lcursor "실패하는 테스트 수정해"
+```
+
 ## English
 
 ### Install Workspace Helpers
@@ -29,7 +56,7 @@ If the package is published to npm in your environment, this form is equivalent:
 npx lazycursor-ai install
 ```
 
-The package exposes both `lazycursor` and `lazycursor-ai` binaries.
+The package exposes `lcursor`, `lazycursor`, and `lazycursor-ai` binaries.
 
 ### Hard-Enforced Wrapper Usage
 
@@ -117,6 +144,7 @@ npx lazycursor-ai install
 ```
 
 이 패키지는 `lazycursor`와 `lazycursor-ai` 실행 파일을 모두 제공합니다.
+짧은 ACP 강제 실행은 `lcursor "작업"`을 사용합니다.
 
 ### 강제 실행 사용법
 
@@ -183,6 +211,7 @@ npx lazycursor-ai install
 ```
 
 このパッケージは `lazycursor` と `lazycursor-ai` の両方のコマンドを提供します。
+短い ACP 強制実行には `lcursor "task"` を使います。
 
 ### 強制付きラッパーの使い方
 
@@ -244,6 +273,7 @@ npx lazycursor-ai install
 ```
 
 该包同时提供 `lazycursor` 和 `lazycursor-ai` 两个命令。
+最短的 ACP 强制执行命令是 `lcursor "task"`。
 
 ### 强制执行用法
 
@@ -295,6 +325,8 @@ wrapper。
 
 - `lazycursor install [--target <workspace>]`: install Cursor commands, rules,
   best-effort hooks, JSON state, and AGENTS routing.
+- `lcursor <task...>`: short ACP-enforced runner, equivalent to
+  `lazycursor tui <task...>`.
 - `lazycursor <task...>`: hard-enforced headless ultrawork runner.
 - `lazycursor run <task...>`: explicit form of the default task runner.
 - `lazycursor tui <task...>`: hard-enforced ACP runner using `cursor-agent acp`.
