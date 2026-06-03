@@ -6,11 +6,11 @@ import {
 	inspectLazycursorStop,
 } from "./state.mjs";
 
-export async function runEnforcedAcpUltrawork(command) {
+export async function runEnforcedAcpUltrawork(command, options = {}) {
 	const workspace = process.cwd();
 	activateUltraworkState(workspace, command.statePrompt, "acp");
 
-	const client = new AcpClient(command.bin, command.args, workspace);
+	const client = new AcpClient(command.bin, command.args, workspace, options);
 	try {
 		await client.start();
 		const session = await client.openSession(workspace);
@@ -37,10 +37,11 @@ export async function runEnforcedAcpUltrawork(command) {
 }
 
 class AcpClient {
-	constructor(bin, args, cwd) {
+	constructor(bin, args, cwd, options = {}) {
 		this.bin = bin;
 		this.args = args;
 		this.cwd = cwd;
+		this.onOutput = options.onOutput;
 		this.nextId = 1;
 		this.pending = new Map();
 		this.child = null;
@@ -73,7 +74,7 @@ class AcpClient {
 				fs: { readTextFile: false, writeTextFile: false },
 				terminal: false,
 			},
-			clientInfo: { name: "lazycursor", version: "0.4.0" },
+			clientInfo: { name: "lazycursor", version: "0.5.0" },
 		});
 		await this.request("authenticate", { methodId: "cursor_login" });
 		return this.request("session/new", { cwd, mcpServers: [] });
@@ -141,7 +142,11 @@ class AcpClient {
 			update?.sessionUpdate === "agent_message_chunk" &&
 			typeof text === "string"
 		) {
-			process.stdout.write(text);
+			if (this.onOutput === undefined) {
+				process.stdout.write(text);
+				return;
+			}
+			this.onOutput(text);
 		}
 	}
 

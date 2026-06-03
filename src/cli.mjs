@@ -1,5 +1,7 @@
 import {
 	formatDryRunCommand,
+	normalizeLcursorArgs,
+	parseInteractiveLcursorArgs,
 	parseLazycursorArgs,
 	runCursorCommand,
 } from "./command.mjs";
@@ -8,6 +10,7 @@ import {
 	buildInstallPlan,
 	formatInstallPlan,
 } from "./install.mjs";
+import { runInteractiveTui } from "./tui.mjs";
 
 export async function runLazycursorCli(argv) {
 	const parsed = parseLazycursorArgs(argv);
@@ -39,4 +42,18 @@ export async function runLazycursorCli(argv) {
 	}
 
 	return runCursorCommand(parsed.command);
+}
+
+export async function runLcursorCli(argv) {
+	const interactive = parseInteractiveLcursorArgs(argv);
+	if (interactive.kind === "interactive") {
+		return runInteractiveTui({ cursorAgentBin: interactive.cursorAgentBin });
+	}
+
+	if (interactive.kind === "error") {
+		console.error(interactive.message);
+		return 2;
+	}
+
+	return runLazycursorCli(normalizeLcursorArgs(argv));
 }

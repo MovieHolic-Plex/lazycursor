@@ -27,6 +27,12 @@ Then run ACP-enforced lazycursor from any Cursor workspace:
 lcursor "fix failing tests"
 ```
 
+Or open the Ink mini TUI and type the task there:
+
+```bash
+lcursor
+```
+
 Equivalent long form:
 
 ```bash
@@ -39,6 +45,8 @@ lazycursor tui "fix failing tests"
 npm install -g github:MovieHolic-Plex/lazycursor
 lcursor "실패하는 테스트 수정해"
 ```
+
+작업을 먼저 입력하고 싶으면 `lcursor`만 실행하면 Ink mini TUI가 열립니다.
 
 ## English
 

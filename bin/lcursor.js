@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-import { runLazycursorCli } from "../src/cli.mjs";
-import { normalizeLcursorArgs } from "../src/command.mjs";
+import { runLcursorCli } from "../src/cli.mjs";
 
-process.exit(
-	await runLazycursorCli(normalizeLcursorArgs(process.argv.slice(2))),
-);
+process.exit(await runLcursorCli(process.argv.slice(2)));

@@ -1,6 +1,6 @@
 {
 	"name": "lazycursor-ai",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"description": "Cursor Agent ultrawork command installer inspired by lazycodex.",
 	"type": "module",
 	"bin": {
@@ -15,7 +15,7 @@
 		"LICENSE"
 	],
 	"scripts": {
-		"test": "node --test test/*.test.mjs",
+		"test": "node --test --test-concurrency=1 test/*.test.mjs",
 		"pack:dry-run": "npm pack --dry-run"
 	},
 	"keywords": [
@@ -34,5 +34,12 @@
 	"bugs": {
 		"url": "https://github.com/MovieHolic-Plex/lazycursor/issues"
 	},
-	"homepage": "https://github.com/MovieHolic-Plex/lazycursor#readme"
+	"homepage": "https://github.com/MovieHolic-Plex/lazycursor#readme",
+	"dependencies": {
+		"ink": "^7.0.5",
+		"react": "^19.2.7"
+	},
+	"devDependencies": {
+		"ink-testing-library": "^4.0.0"
+	}
 }

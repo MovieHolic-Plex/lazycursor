@@ -41,6 +41,31 @@ const LCURSOR_PASSTHROUGH_COMMANDS = new Set([
 	"plan",
 ]);
 
+export function parseInteractiveLcursorArgs(argv) {
+	let cursorAgentBin = DEFAULT_CURSOR_AGENT_BIN;
+
+	for (let index = 0; index < argv.length; index += 1) {
+		const value = argv[index];
+
+		if (value === "--cursor-agent-bin") {
+			const nextValue = argv[index + 1];
+			if (nextValue === undefined || nextValue.length === 0) {
+				return {
+					kind: "error",
+					message: "--cursor-agent-bin requires a value",
+				};
+			}
+			cursorAgentBin = nextValue;
+			index += 1;
+			continue;
+		}
+
+		return { kind: "passthrough" };
+	}
+
+	return { kind: "interactive", cursorAgentBin };
+}
+
 export function buildCursorCommand(argv, options = {}) {
 	const bin = options.cursorAgentBin ?? DEFAULT_CURSOR_AGENT_BIN;
 
@@ -210,9 +235,9 @@ export function formatDryRunCommand(command) {
 	return [command.bin, ...command.args].map(shellQuote).join(" ");
 }
 
-export function runCursorCommand(command) {
+export function runCursorCommand(command, options = {}) {
 	if (command.runner === "acp") {
-		return runEnforcedAcpUltrawork(command);
+		return runEnforcedAcpUltrawork(command, options);
 	}
 
 	if (typeof command.statePrompt !== "string") {

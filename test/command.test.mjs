@@ -16,6 +16,7 @@ import {
 	buildCursorCommand,
 	formatDryRunCommand,
 	normalizeLcursorArgs,
+	parseInteractiveLcursorArgs,
 	parseLazycursorArgs,
 } from "../src/command.mjs";
 import { applyInstallPlan, buildInstallPlan } from "../src/install.mjs";
@@ -127,6 +128,31 @@ describe("normalizeLcursorArgs", () => {
 		assert.deepEqual(normalizeLcursorArgs(["install"]), ["install"]);
 		assert.deepEqual(normalizeLcursorArgs(["ulw", "fix"]), ["ulw", "fix"]);
 		assert.deepEqual(normalizeLcursorArgs(["tui", "fix"]), ["tui", "fix"]);
+	});
+});
+
+describe("parseInteractiveLcursorArgs", () => {
+	it("Given no lcursor args When parsing interactive options Then it opens the Ink TUI with the default agent", () => {
+		assert.deepEqual(parseInteractiveLcursorArgs([]), {
+			kind: "interactive",
+			cursorAgentBin: "cursor-agent",
+		});
+	});
+
+	it("Given only cursor-agent-bin When parsing interactive options Then it opens the Ink TUI with that agent", () => {
+		assert.deepEqual(
+			parseInteractiveLcursorArgs(["--cursor-agent-bin", "/tmp/fake-agent"]),
+			{
+				kind: "interactive",
+				cursorAgentBin: "/tmp/fake-agent",
+			},
+		);
+	});
+
+	it("Given a task token When parsing interactive options Then lcursor should use the one-shot runner", () => {
+		assert.deepEqual(parseInteractiveLcursorArgs(["fix", "tests"]), {
+			kind: "passthrough",
+		});
 	});
 });
 

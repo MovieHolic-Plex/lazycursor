@@ -101,7 +101,7 @@ describe("repository hygiene", () => {
 			}
 		}
 
-		assert.equal(existsSync(join(rootDir, "package-lock.json")), false);
+		assert.equal(existsSync(join(rootDir, "package-lock.json")), true);
 		assert.ok(visited.includes("package.json"));
 	});
 });

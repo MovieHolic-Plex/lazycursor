@@ -6,3 +6,4 @@ node_modules/
 credentials.*
 config.local.*
 coverage/
+.omx/
