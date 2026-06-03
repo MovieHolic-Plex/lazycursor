@@ -6,20 +6,38 @@ export function LazycursorFrame({
 	activeTask,
 	color,
 	composerText,
+	currentActivity,
 	cursorAgentBin,
 	model,
 	phase,
 	statusText,
 	statusLabel,
+	todoItems,
 	transcript,
+	workflowPhase = phase,
 }) {
 	return React.createElement(
 		Box,
 		{ flexDirection: "column", paddingX: 1 },
 		React.createElement(Header, { label: statusLabel, color }),
 		React.createElement(StatusRail, { activeTask, cursorAgentBin, model }),
-		React.createElement(ObligationRail, { completed: phase === "done" }),
-		React.createElement(TranscriptPanel, { color, entries: transcript }),
+		React.createElement(ObligationRail, {
+			completed: workflowPhase === "done",
+		}),
+		React.createElement(
+			Box,
+			{ flexDirection: "row", gap: 1 },
+			React.createElement(TranscriptPanel, {
+				color,
+				entries: transcript,
+			}),
+			React.createElement(TodoPanel, {
+				activity: currentActivity,
+				color,
+				items: todoItems,
+				phase: workflowPhase,
+			}),
+		),
 		React.createElement(ComposerPanel, { phase, text: composerText }),
 		React.createElement(Text, { color }, statusText),
 		React.createElement(
@@ -96,6 +114,7 @@ function TranscriptPanel({ color, entries }) {
 			borderColor: color,
 			borderStyle: "round",
 			flexDirection: "column",
+			flexGrow: 1,
 			marginTop: 1,
 			paddingX: 1,
 		},
@@ -105,6 +124,35 @@ function TranscriptPanel({ color, entries }) {
 				entry,
 				key: `${index}:${entry.kind}:${entry.text}`,
 			}),
+		),
+	);
+}
+
+function TodoPanel({ activity, color, items, phase }) {
+	return React.createElement(
+		Box,
+		{
+			borderColor: color,
+			borderStyle: "round",
+			flexDirection: "column",
+			marginTop: 1,
+			paddingX: 1,
+			width: 32,
+		},
+		React.createElement(Text, { bold: true }, "Todo"),
+		React.createElement(
+			Text,
+			{ color: "gray" },
+			React.createElement(Text, { color }, "Now: "),
+			activity,
+		),
+		React.createElement(Text, { color: "gray" }, `State: ${phase}`),
+		...items.map((item) =>
+			React.createElement(
+				Text,
+				{ key: item.name, color: todoColor(item.status) },
+				`${todoMark(item.status)} ${item.name}`,
+			),
 		),
 	);
 }
@@ -137,4 +185,30 @@ function TranscriptLine({ entry }) {
 		React.createElement(Text, null, "  "),
 		React.createElement(Text, null, entry.text),
 	);
+}
+
+function todoMark(status) {
+	switch (status) {
+		case "done":
+			return "[x]";
+		case "active":
+			return "[>]";
+		case "failed":
+			return "[!]";
+		default:
+			return "[ ]";
+	}
+}
+
+function todoColor(status) {
+	switch (status) {
+		case "done":
+			return "green";
+		case "active":
+			return "yellow";
+		case "failed":
+			return "red";
+		default:
+			return "gray";
+	}
 }

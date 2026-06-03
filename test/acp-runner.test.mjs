@@ -9,7 +9,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 
+import { createAcpConversation } from "../src/acp.mjs";
 import { runCursorCommand } from "../src/command.mjs";
 
 async function withWorkspace(run) {
@@ -34,6 +36,7 @@ function writeFakeAcpAgent(target) {
 			"import { createInterface } from 'node:readline';",
 			"import { join } from 'node:path';",
 			"const rl = createInterface({ input: process.stdin });",
+			"process.stdin.resume();",
 			"function send(value) { process.stdout.write(JSON.stringify(value) + '\\n'); }",
 			"function markDone() {",
 			"  const statePath = join(process.cwd(), '.cursor', 'lazycursor', 'state.json');",
@@ -54,6 +57,58 @@ function writeFakeAcpAgent(target) {
 			"    send({ jsonrpc: '2.0', method: 'session/update', params: { update: { sessionUpdate: 'agent_message_chunk', content: { text: '' } } } });",
 			"    send({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } });",
 			"  }",
+			"});",
+		].join("\n"),
+		"utf8",
+	);
+	chmodSync(fakeAgent, 0o755);
+	return fakeAgent;
+}
+
+function writeFailingAcpAgent(target) {
+	const fakeAgent = join(target, "failing-acp-agent.mjs");
+	writeFileSync(
+		fakeAgent,
+		[
+			"#!/usr/bin/env node",
+			"import { appendFileSync } from 'node:fs';",
+			"import { createInterface } from 'node:readline';",
+			"const rl = createInterface({ input: process.stdin });",
+			"process.stdin.resume();",
+			"setInterval(() => {}, 1000);",
+			"process.on('SIGTERM', () => { appendFileSync('signals.log', 'SIGTERM\\n'); process.exit(143); });",
+			"function send(value) { process.stdout.write(JSON.stringify(value) + '\\n'); }",
+			"rl.on('line', (line) => {",
+			"  const message = JSON.parse(line);",
+			"  if (message.method === 'initialize') send({ jsonrpc: '2.0', id: message.id, result: {} });",
+			"  if (message.method === 'authenticate') send({ jsonrpc: '2.0', id: message.id, error: { message: 'auth failed' } });",
+			"});",
+		].join("\n"),
+		"utf8",
+	);
+	chmodSync(fakeAgent, 0o755);
+	return fakeAgent;
+}
+
+function writeHangingPromptAcpAgent(target) {
+	const fakeAgent = join(target, "hanging-acp-agent.mjs");
+	writeFileSync(
+		fakeAgent,
+		[
+			"#!/usr/bin/env node",
+			"import { appendFileSync } from 'node:fs';",
+			"import { createInterface } from 'node:readline';",
+			"const rl = createInterface({ input: process.stdin });",
+			"process.stdin.resume();",
+			"setInterval(() => {}, 1000);",
+			"process.on('SIGTERM', () => { appendFileSync('signals.log', 'SIGTERM\\n'); process.exit(143); });",
+			"function send(value) { process.stdout.write(JSON.stringify(value) + '\\n'); }",
+			"rl.on('line', (line) => {",
+			"  const message = JSON.parse(line);",
+			"  if (message.method === 'initialize') send({ jsonrpc: '2.0', id: message.id, result: {} });",
+			"  if (message.method === 'authenticate') send({ jsonrpc: '2.0', id: message.id, result: {} });",
+			"  if (message.method === 'session/new') send({ jsonrpc: '2.0', id: message.id, result: { sessionId: 's1' } });",
+			"  if (message.method === 'session/prompt') appendFileSync('prompts.log', 'received\\n');",
 			"});",
 		].join("\n"),
 		"utf8",
@@ -92,6 +147,52 @@ describe("ACP runner", () => {
 			assert.equal(state.phase, "finished");
 			assert.equal(state.stopLoopCount, 1);
 			assert.match(events, /"source":"acp"/);
+		});
+	});
+
+	it("Given ACP session creation fails When opening a conversation Then the child process is closed", async () => {
+		await withWorkspace(async (target) => {
+			const fakeAgent = writeFailingAcpAgent(target);
+
+			await assert.rejects(
+				() =>
+					createAcpConversation({
+						bin: fakeAgent,
+						args: ["acp"],
+						runner: "acp",
+						statePrompt: "fix tests",
+					}),
+				/auth failed/,
+			);
+			await delay(20);
+
+			assert.match(
+				readFileSync(join(target, "signals.log"), "utf8"),
+				/SIGTERM/,
+			);
+		});
+	});
+
+	it("Given an in-flight ACP prompt When closing a conversation Then the pending submit rejects", async () => {
+		await withWorkspace(async (target) => {
+			const fakeAgent = writeHangingPromptAcpAgent(target);
+			const conversation = await createAcpConversation({
+				bin: fakeAgent,
+				args: ["acp"],
+				runner: "acp",
+				statePrompt: "fix tests",
+			});
+
+			const pending = conversation.submit("hang forever");
+			await delay(20);
+			conversation.close();
+
+			await assert.rejects(pending, /closed/);
+			await delay(50);
+			assert.match(
+				readFileSync(join(target, "signals.log"), "utf8"),
+				/SIGTERM/,
+			);
 		});
 	});
 });

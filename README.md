@@ -41,9 +41,10 @@ Or open the Ink TUI and type the task there:
 lcursor
 ```
 
-The TUI keeps the ACP session behind a full-screen workspace surface: status
-HUD, obligation rail, live transcript, composer, scroll, clear, and exit
-controls.
+The TUI keeps one ACP session behind a full-screen workspace surface: status
+HUD, obligation rail, live transcript, side todo/activity panel, composer,
+scroll, clear, and exit controls. After a turn completes, keep typing to send a
+follow-up in the same session, or press `q` on an empty composer to exit.
 
 Equivalent long form:
 
@@ -60,8 +61,9 @@ lcursor --model composer-2.5-fast "실패하는 테스트 수정해"
 ```
 
 작업을 먼저 입력하고 싶으면 `lcursor`만 실행하면 Ink TUI가 열립니다. 이 화면은
-상태 HUD, obligation rail, live transcript, composer, scroll/clear/exit 키를
-한 화면에서 제공합니다.
+상태 HUD, obligation rail, live transcript, side todo/activity panel, composer,
+scroll/clear/exit 키를 한 화면에서 제공합니다. 한 턴이 끝난 뒤에도 같은 ACP
+session에서 이어 입력할 수 있고, 빈 composer에서 `q`를 누르면 종료됩니다.
 
 ## English
 
@@ -142,6 +144,10 @@ The hook files are installed as a best-effort Cursor hook surface. If your
 Cursor Agent build dispatches project hooks, they can activate and block on the
 same JSON state. If it does not, use `lazycursor tui ...` or the headless
 wrapper commands above for hard enforcement.
+
+The `lcursor` no-argument TUI keeps the ACP session open across turns. Use the
+side todo/activity panel to see the current phase, obligation checklist, and the
+latest agent activity while the transcript streams.
 
 ### Other Commands
 
@@ -241,6 +247,7 @@ npx lazycursor-ai install
 短い ACP 強制実行には `lcursor "task"` を使います。
 `lcursor` だけで起動すると、status HUD、obligation rail、live transcript、
 composer、scroll/clear/exit 操作を備えた Ink TUI が開きます。
+turn 完了後も同じ ACP session に follow-up を入力できます。
 
 ### 強制付きラッパーの使い方
 
@@ -309,6 +316,7 @@ npx lazycursor-ai install
 `lcursor --model composer-2.5-fast "task"`。
 只运行 `lcursor` 会打开 Ink TUI，包含 status HUD、obligation rail、live
 transcript、composer，以及 scroll/clear/exit 键盘操作。
+每一轮结束后可以继续输入 follow-up，并保持同一个 ACP session。
 
 ### 强制执行用法
 

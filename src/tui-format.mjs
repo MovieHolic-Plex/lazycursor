@@ -50,6 +50,31 @@ export function nextScrollOffset(current, direction, entries) {
 	return Math.max(0, current - 1);
 }
 
+export function buildTodoItems(phase) {
+	return OBLIGATIONS.map((name, index) => ({
+		name,
+		status: todoStatusFor({ index, phase }),
+	}));
+}
+
+export function activityText({ lastActivity, phase }) {
+	if (lastActivity.length > 0) {
+		return truncateMiddle(lastActivity, 44);
+	}
+	switch (phase) {
+		case "editing":
+			return "Waiting for task input";
+		case "running":
+			return "Starting Cursor Agent ACP";
+		case "done":
+			return "Workflow finished";
+		case "failed":
+			return "Workflow failed";
+		default:
+			return "Idle";
+	}
+}
+
 export function phaseMeta(phase) {
 	switch (phase) {
 		case "done":
@@ -99,6 +124,27 @@ function appendStreamingChunk(entries, kind, text) {
 		return;
 	}
 	entries.push({ kind, text, sealed: false });
+}
+
+function todoStatusFor({ index, phase }) {
+	if (phase === "done") {
+		return "done";
+	}
+	if (phase === "failed") {
+		return index === 0 ? "failed" : "pending";
+	}
+	if (phase === "running") {
+		return index === 0 ? "active" : "pending";
+	}
+	return "pending";
+}
+
+function truncateMiddle(text, maxLength) {
+	if (text.length <= maxLength) {
+		return text;
+	}
+	const keep = Math.max(1, Math.floor((maxLength - 3) / 2));
+	return `${text.slice(0, keep)}...${text.slice(-keep)}`;
 }
 
 function sealLastEntry(entries) {

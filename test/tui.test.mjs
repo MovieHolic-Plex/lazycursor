@@ -22,6 +22,8 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 
 		assert.match(app.lastFrame() ?? "", /ACP ultrawork/);
 		assert.match(app.lastFrame() ?? "", /Transcript/);
+		assert.match(app.lastFrame() ?? "", /Todo/);
+		assert.match(app.lastFrame() ?? "", /Now: Waiting for task input/);
 		assert.match(app.lastFrame() ?? "", /Composer/);
 		assert.match(app.lastFrame() ?? "", /Enter submit/);
 
@@ -72,7 +74,7 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		app.stdin.write("fix tests\r");
 
 		await waitFor(
-			() => calls.length === 1 && app.lastFrame()?.includes("Done."),
+			() => calls.length === 1 && app.lastFrame()?.includes("Turn complete"),
 			"successful TUI completion",
 		);
 
@@ -86,7 +88,82 @@ describe("LazycursorTuiApp", { concurrency: false }, () => {
 		assert.match(app.lastFrame() ?? "", /agent chunk/);
 		assert.match(app.lastFrame() ?? "", /USER/);
 		assert.match(app.lastFrame() ?? "", /AGENT/);
-		assert.match(app.lastFrame() ?? "", /DONE/);
+		assert.match(app.lastFrame() ?? "", /Turn complete/);
+
+		app.unmount();
+	});
+
+	it("Given the real TUI runner When a turn completes Then a follow-up is sent through the same ACP conversation", async () => {
+		const commands = [];
+		const prompts = [];
+		let closed = false;
+		const conversationFactory = async (command, options) => {
+			commands.push(command);
+			return {
+				close() {
+					closed = true;
+				},
+				async submit(value) {
+					prompts.push(value);
+					options.onOutput(`answer for ${value}\n`);
+					return 0;
+				},
+			};
+		};
+		const app = render(
+			React.createElement(LazycursorTuiApp, {
+				autoExit: false,
+				conversationFactory,
+			}),
+		);
+
+		app.stdin.write("first task\r");
+
+		await waitFor(
+			() => app.lastFrame()?.includes("Type a follow-up"),
+			"first turn completion",
+		);
+
+		app.stdin.write("second task\r");
+
+		await waitFor(
+			() =>
+				prompts.length === 2 && app.lastFrame()?.includes("answer for second"),
+			"second turn completion",
+		);
+
+		assert.match(app.lastFrame() ?? "", /second task/);
+
+		app.stdin.write("q");
+
+		await waitFor(() => closed, "conversation close");
+
+		assert.equal(commands.length, 1);
+		assert.deepEqual(prompts, ["first task", "second task"]);
+
+		app.unmount();
+	});
+
+	it("Given auto-exit mode When a conversation turn completes Then the ACP conversation is closed", async () => {
+		let closed = false;
+		const conversationFactory = async () => ({
+			close() {
+				closed = true;
+			},
+			async submit() {
+				return 0;
+			},
+		});
+		const app = render(
+			React.createElement(LazycursorTuiApp, {
+				autoExit: true,
+				conversationFactory,
+			}),
+		);
+
+		app.stdin.write("auto close\r");
+
+		await waitFor(() => closed, "auto-exit conversation close");
 
 		app.unmount();
 	});

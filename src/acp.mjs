@@ -8,32 +8,46 @@ import {
 
 export async function runEnforcedAcpUltrawork(command, options = {}) {
 	const workspace = process.cwd();
-	activateUltraworkState(workspace, command.statePrompt, "acp");
-
 	const client = new AcpClient(command.bin, command.args, workspace, options);
 	try {
 		await client.start();
 		const session = await client.openSession(workspace);
-		let prompt = buildRunPrompt(command.statePrompt);
-
-		for (;;) {
-			await client.sendPrompt(session.sessionId, prompt);
-			const stop = inspectLazycursorStop(workspace, 8, "acp");
-			if (stop.kind === "inactive" || stop.kind === "finished") {
-				return 0;
-			}
-
-			const followup = buildStopFollowup(stop.pending, "ACP");
-			if (stop.kind === "limit_exceeded") {
-				console.error(followup);
-				console.error("LAZYCURSOR STOP ACP: loop limit exceeded.");
-				return 1;
-			}
-			prompt = buildRunPrompt(followup);
-		}
+		return await sendEnforcedPrompt({
+			client,
+			prompt: command.statePrompt,
+			sessionId: session.sessionId,
+			workspace,
+		});
 	} finally {
 		client.close();
 	}
+}
+
+export async function createAcpConversation(command, options = {}) {
+	const workspace = process.cwd();
+	const client = new AcpClient(command.bin, command.args, workspace, options);
+	let session;
+	try {
+		await client.start();
+		session = await client.openSession(workspace);
+	} catch (error) {
+		client.close();
+		throw error;
+	}
+
+	return {
+		close() {
+			client.close();
+		},
+		submit(prompt) {
+			return sendEnforcedPrompt({
+				client,
+				prompt,
+				sessionId: session.sessionId,
+				workspace,
+			});
+		},
+	};
 }
 
 class AcpClient {
@@ -45,6 +59,7 @@ class AcpClient {
 		this.nextId = 1;
 		this.pending = new Map();
 		this.child = null;
+		this.closing = false;
 	}
 
 	async start() {
@@ -57,13 +72,14 @@ class AcpClient {
 		const lines = createInterface({ input: this.child.stdout });
 		lines.on("line", (line) => this.handleLine(line));
 		this.child.on("exit", (code) => {
+			if (this.closing) {
+				this.pending.clear();
+				return;
+			}
 			const error = new Error(
 				`ACP process exited with code ${code ?? "unknown"}`,
 			);
-			for (const waiter of this.pending.values()) {
-				waiter.reject(error);
-			}
-			this.pending.clear();
+			this.rejectPending(error);
 		});
 	}
 
@@ -74,7 +90,7 @@ class AcpClient {
 				fs: { readTextFile: false, writeTextFile: false },
 				terminal: false,
 			},
-			clientInfo: { name: "lazycursor", version: "0.6.0" },
+			clientInfo: { name: "lazycursor", version: "0.8.0" },
 		});
 		await this.request("authenticate", { methodId: "cursor_login" });
 		return this.request("session/new", { cwd, mcpServers: [] });
@@ -163,11 +179,41 @@ class AcpClient {
 		if (this.child === null) {
 			return;
 		}
+		this.closing = true;
+		this.rejectPending(new Error("ACP process was closed"));
 		this.child.stdin.end();
 		this.child.kill();
+	}
+
+	rejectPending(error) {
+		for (const waiter of this.pending.values()) {
+			waiter.reject(error);
+		}
+		this.pending.clear();
 	}
 }
 
 function buildRunPrompt(prompt) {
 	return `ultrawork ${prompt}`.trim();
+}
+
+async function sendEnforcedPrompt({ client, prompt, sessionId, workspace }) {
+	activateUltraworkState(workspace, prompt, "acp");
+	let nextPrompt = buildRunPrompt(prompt);
+
+	for (;;) {
+		await client.sendPrompt(sessionId, nextPrompt);
+		const stop = inspectLazycursorStop(workspace, 8, "acp");
+		if (stop.kind === "inactive" || stop.kind === "finished") {
+			return 0;
+		}
+
+		const followup = buildStopFollowup(stop.pending, "ACP");
+		if (stop.kind === "limit_exceeded") {
+			console.error(followup);
+			console.error("LAZYCURSOR STOP ACP: loop limit exceeded.");
+			return 1;
+		}
+		nextPrompt = buildRunPrompt(followup);
+	}
 }

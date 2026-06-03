@@ -1,14 +1,22 @@
 import { render, useApp, useInput } from "ink";
-import React, { useCallback, useState } from "react";
-import { buildCursorCommand, runCursorCommand } from "./command.mjs";
+import React, { useCallback, useRef, useState } from "react";
+import { createAcpConversation } from "./acp.mjs";
+import { buildCursorCommand } from "./command.mjs";
 import {
+	getComposerText,
+	runLineInputFallback,
+	submitTask,
+} from "./tui-controller.mjs";
+import {
+	activityText,
 	appendStreamingTranscript,
 	appendTranscript,
+	buildTodoItems,
 	createInitialTranscript,
 	getVisibleTranscript,
-	nextScrollOffset,
 	phaseMeta,
 } from "./tui-format.mjs";
+import { handleTuiInput } from "./tui-input.mjs";
 import { LazycursorFrame } from "./tui-view.mjs";
 
 export async function runInteractiveTui(options = {}) {
@@ -25,7 +33,7 @@ export async function runInteractiveTui(options = {}) {
 			onExitStatus: (status) => {
 				exitStatus = status;
 			},
-			runCommand: options.runCommand ?? runCursorCommand,
+			runCommand: options.runCommand,
 		}),
 		{ exitOnCtrlC: true },
 	);
@@ -34,38 +42,13 @@ export async function runInteractiveTui(options = {}) {
 	return exitStatus;
 }
 
-async function runLineInputFallback(options) {
-	process.stdout.write("lazycursor> ");
-	const chunks = [];
-	for await (const chunk of process.stdin) {
-		chunks.push(Buffer.from(chunk));
-	}
-	const prompt = Buffer.concat(chunks)
-		.toString("utf8")
-		.split(/\r?\n|\r/u)[0]
-		.trim();
-
-	if (prompt.length === 0) {
-		console.error("No task provided.");
-		return 2;
-	}
-
-	const cursorAgentBin = options.cursorAgentBin ?? "cursor-agent";
-	const runCommand = options.runCommand ?? runCursorCommand;
-	return runCommand(
-		buildCursorCommand(["tui", prompt], {
-			cursorAgentBin,
-			model: options.model,
-		}),
-	);
-}
-
 export function LazycursorTuiApp({
 	autoExit = false,
+	conversationFactory = createAcpConversation,
 	cursorAgentBin = "cursor-agent",
 	model,
 	onExitStatus,
-	runCommand = runCursorCommand,
+	runCommand,
 }) {
 	const { exit } = useApp();
 	const [prompt, setPrompt] = useState("");
@@ -74,16 +57,31 @@ export function LazycursorTuiApp({
 	const [submittedTask, setSubmittedTask] = useState("");
 	const [scrollOffset, setScrollOffset] = useState(0);
 	const [transcript, setTranscript] = useState(createInitialTranscript);
+	const [lastActivity, setLastActivity] = useState("");
+	const [conversation, setConversation] = useState(null);
+	const conversationRef = useRef(null);
 
 	const appendEntry = useCallback((kind, text) => {
 		setScrollOffset(0);
+		setLastActivity(text.trim());
 		setTranscript((current) => appendTranscript(current, kind, text));
 	}, []);
 
 	const appendStreamEntry = useCallback((kind, text) => {
 		setScrollOffset(0);
+		setLastActivity((current) =>
+			`${current}${text}`.replace(/\s+/g, " ").trim(),
+		);
 		setTranscript((current) => appendStreamingTranscript(current, kind, text));
 	}, []);
+
+	const closeTui = useCallback(() => {
+		const currentConversation = conversationRef.current ?? conversation;
+		currentConversation?.close();
+		conversationRef.current = null;
+		setConversation(null);
+		exit();
+	}, [conversation, exit]);
 
 	const submit = useCallback(
 		(value = prompt) => {
@@ -97,32 +95,42 @@ export function LazycursorTuiApp({
 			setSubmittedTask(task);
 			setPrompt("");
 			setScrollOffset(0);
-			setTranscript(appendTranscript(createInitialTranscript(), "user", task));
+			setLastActivity("Starting ACP session");
+			setTranscript((current) => appendTranscript(current, "user", task));
 
 			const command = buildCursorCommand(["tui", task], {
 				cursorAgentBin,
 				model,
 			});
-			void runCommand(command, {
+			void submitTask({
+				command,
+				conversation,
+				conversationFactory,
+				onConversation: (nextConversation) => {
+					conversationRef.current = nextConversation;
+					setConversation(nextConversation);
+				},
 				onOutput: (text) => appendStreamEntry("agent", text),
+				runCommand,
+				task,
 			})
 				.then((status) => {
-					const nextPhase = status === 0 ? "done" : "failed";
+					const nextPhase = status === 0 ? "editing" : "failed";
 					setPhase(nextPhase);
 					setStatusText(
 						status === 0
-							? "Done. Press q or Enter to exit."
+							? "Turn complete. Type a follow-up or press q to exit."
 							: `Failed with exit status ${status}. Press q or Enter to exit.`,
 					);
 					appendEntry(
 						status === 0 ? "result" : "error",
 						status === 0
-							? "Done. All lazycursor obligations are closed."
+							? "Turn complete. Continue the conversation or press q."
 							: `Failed with exit status ${status}.`,
 					);
 					onExitStatus?.(status);
 					if (autoExit) {
-						setTimeout(exit, 0);
+						setTimeout(closeTui, 0);
 					}
 				})
 				.catch((error) => {
@@ -136,7 +144,7 @@ export function LazycursorTuiApp({
 					);
 					onExitStatus?.(1);
 					if (autoExit) {
-						setTimeout(exit, 0);
+						setTimeout(closeTui, 0);
 					}
 				});
 		},
@@ -144,8 +152,10 @@ export function LazycursorTuiApp({
 			appendEntry,
 			appendStreamEntry,
 			autoExit,
+			closeTui,
+			conversation,
+			conversationFactory,
 			cursorAgentBin,
-			exit,
 			model,
 			onExitStatus,
 			phase,
@@ -156,62 +166,19 @@ export function LazycursorTuiApp({
 
 	useInput(
 		(input, key) => {
-			if (key.ctrl && input === "c") {
-				onExitStatus?.(130);
-				exit();
-				return;
-			}
-
-			if (key.ctrl && input === "l") {
-				setTranscript(createInitialTranscript());
-				setScrollOffset(0);
-				return;
-			}
-
-			if (key.upArrow) {
-				setScrollOffset((current) =>
-					nextScrollOffset(current, "up", transcript),
-				);
-				return;
-			}
-
-			if (key.downArrow) {
-				setScrollOffset((current) =>
-					nextScrollOffset(current, "down", transcript),
-				);
-				return;
-			}
-
-			if (phase === "done" || phase === "failed") {
-				if (key.return || input === "q") {
-					exit();
-				}
-				return;
-			}
-
-			if (phase !== "editing") {
-				return;
-			}
-
-			const lineBreak = input.includes("\r") || input.includes("\n");
-			if (key.return || lineBreak) {
-				const text = input.replace(/\r?\n/g, "");
-				const nextPrompt = `${prompt}${text}`;
-				if (text.length > 0) {
-					setPrompt(nextPrompt);
-				}
-				submit(nextPrompt);
-				return;
-			}
-
-			if (key.backspace || key.delete) {
-				setPrompt((current) => current.slice(0, -1));
-				return;
-			}
-
-			if (input.length > 0) {
-				setPrompt((current) => `${current}${input}`);
-			}
+			handleTuiInput({
+				closeTui,
+				input,
+				key,
+				onExitStatus,
+				phase,
+				prompt,
+				setPrompt,
+				setScrollOffset,
+				setTranscript,
+				submit,
+				transcript,
+			});
 		},
 		{ isActive: true },
 	);
@@ -220,31 +187,22 @@ export function LazycursorTuiApp({
 	const visibleTranscript = getVisibleTranscript(transcript, scrollOffset);
 	const activeTask = submittedTask.length > 0 ? submittedTask : prompt;
 	const composerText = getComposerText({ phase, prompt });
+	const workflowPhase = statusText.startsWith("Turn complete") ? "done" : phase;
+	const currentActivity = activityText({ lastActivity, phase: workflowPhase });
+	const todoItems = buildTodoItems(workflowPhase);
 
 	return React.createElement(LazycursorFrame, {
 		activeTask,
 		color: meta.color,
 		composerText,
+		currentActivity,
 		cursorAgentBin,
 		model,
 		phase,
 		statusLabel: meta.label,
 		statusText,
+		todoItems,
 		transcript: visibleTranscript,
+		workflowPhase,
 	});
-}
-
-function getComposerText({ phase, prompt }) {
-	switch (phase) {
-		case "editing":
-			return prompt.length > 0 ? `${prompt}_` : "Type an ultrawork task...";
-		case "running":
-			return "Agent is running. Transcript is live.";
-		case "done":
-			return "Run complete. Press q or Enter to exit.";
-		case "failed":
-			return "Run failed. Transcript is retained.";
-		default:
-			return "Waiting for input.";
-	}
 }
